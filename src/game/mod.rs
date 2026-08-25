@@ -41,6 +41,10 @@ impl Game {
         );
     }
 
+    pub fn rotate_player(&mut self, angle_radians: f32) {
+        self.player.rotate(angle_radians);
+    }
+
     pub fn reset_player(&mut self) {
         self.player = Player::at(self.level.spawn());
     }
@@ -48,7 +52,13 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use super::Game;
+    use std::f32::consts::FRAC_PI_2;
+
+    use super::{
+        Game,
+        level::Material,
+        raycast::{HitSide, cast_camera_ray},
+    };
 
     #[test]
     fn movement_uses_speed_and_delta_time_then_can_be_reset() {
@@ -62,5 +72,17 @@ mod tests {
 
         game.reset_player();
         assert_eq!(game.player().position, spawn);
+    }
+
+    #[test]
+    fn rotation_changes_the_center_ray_without_distorting_distance() {
+        let mut game = Game::load_first_level().expect("embedded level should be valid");
+
+        game.rotate_player(FRAC_PI_2);
+        let hit = cast_camera_ray(game.level(), game.player(), 0.0).expect("south wall hit");
+
+        assert_eq!(hit.material, Material::Glyph);
+        assert_eq!(hit.side, HitSide::Horizontal);
+        assert!((hit.distance - 2.5).abs() < 0.000_1);
     }
 }

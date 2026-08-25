@@ -34,36 +34,36 @@ impl App {
         })
     }
 
-    pub fn update(&mut self, input: &RaylibHandle, delta_time: f32) {
+    pub fn update(&mut self, input: &mut RaylibHandle, delta_time: f32) {
         self.elapsed_seconds += delta_time;
 
         match self.screen {
             Screen::Welcome => {
                 if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
-                    self.screen = Screen::LevelSelect;
+                    self.transition_to(Screen::LevelSelect, input);
                 }
             }
             Screen::LevelSelect => self.update_level_select(input),
             Screen::Playing => {
                 if input.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
-                    self.screen = Screen::Paused;
+                    self.transition_to(Screen::Paused, input);
                 } else if input.is_key_pressed(KeyboardKey::KEY_V) {
                     // Transicion temporal para comprobar el flujo de pantallas.
-                    self.screen = Screen::Victory;
+                    self.transition_to(Screen::Victory, input);
                 } else {
                     self.update_playing(input, delta_time);
                 }
             }
             Screen::Paused => {
                 if input.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
-                    self.screen = Screen::Playing;
+                    self.transition_to(Screen::Playing, input);
                 } else if input.is_key_pressed(KeyboardKey::KEY_M) {
-                    self.screen = Screen::LevelSelect;
+                    self.transition_to(Screen::LevelSelect, input);
                 }
             }
             Screen::Victory => {
                 if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
-                    self.screen = Screen::LevelSelect;
+                    self.transition_to(Screen::LevelSelect, input);
                 }
             }
         }
@@ -75,7 +75,7 @@ impl App {
         }
     }
 
-    fn update_level_select(&mut self, input: &RaylibHandle) {
+    fn update_level_select(&mut self, input: &mut RaylibHandle) {
         if input.is_key_pressed(KeyboardKey::KEY_LEFT) {
             self.selected_level = self
                 .selected_level
@@ -92,11 +92,14 @@ impl App {
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
-            self.screen = Screen::Playing;
+            self.transition_to(Screen::Playing, input);
         }
     }
 
     fn update_playing(&mut self, input: &RaylibHandle, delta_time: f32) {
+        let rotation = input.get_mouse_delta().x * config::MOUSE_SENSITIVITY;
+        self.game.rotate_player(rotation);
+
         if input.is_key_pressed(KeyboardKey::KEY_R) {
             self.game.reset_player();
         }
@@ -118,6 +121,19 @@ impl App {
         }
 
         self.game.move_player(forward_axis, strafe_axis, delta_time);
+    }
+
+    fn transition_to(&mut self, next_screen: Screen, input: &mut RaylibHandle) {
+        let was_captured = self.screen == Screen::Playing;
+        let should_capture = next_screen == Screen::Playing;
+
+        if !was_captured && should_capture {
+            input.disable_cursor();
+        } else if was_captured && !should_capture {
+            input.enable_cursor();
+        }
+
+        self.screen = next_screen;
     }
 
     pub fn draw(&self, drawing: &mut RaylibDrawHandle<'_>) {

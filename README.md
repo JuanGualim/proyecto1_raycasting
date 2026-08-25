@@ -5,10 +5,10 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 2 en progreso (parte 1):** el ray caster ya permite movimiento con
-`WASD`, velocidad independiente de los FPS y colision circular con deslizamiento
-por paredes. La rotacion con mouse y el minimapa se agregaran en los siguientes
-incrementos de esta fase.
+**Fase 2 en progreso (parte 2):** el ray caster ya permite movimiento con
+`WASD`, colision circular y rotacion horizontal con el mouse. El cursor se
+captura al entrar al nivel y se libera al pausar. El minimapa se agregara en el
+ultimo incremento de esta fase.
 
 ## Requisitos
 
@@ -41,6 +41,7 @@ cargo run --release
 | Selector | Flechas izquierda/derecha | Elegir nivel (uno disponible) |
 | Selector | `Enter` | Iniciar nivel |
 | Juego | `W`, `A`, `S`, `D` | Moverse y desplazarse lateralmente |
+| Juego | Movimiento horizontal del mouse | Girar la camara |
 | Juego | `R` | Regresar al inicio del nivel |
 | Juego | `Esc` | Pausar |
 | Juego | `V` | Probar pantalla de victoria |
@@ -48,8 +49,7 @@ cargo run --release
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
 
-La rotacion horizontal con mouse se habilitara en la parte 2 de esta fase y el
-disparo se incorporara en la Fase 3.
+El minimapa se incorporara en la parte 3 de esta fase y el disparo en la Fase 3.
 
 ## Comprobaciones de desarrollo
 

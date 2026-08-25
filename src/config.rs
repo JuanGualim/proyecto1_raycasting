@@ -10,3 +10,5 @@ pub const LEVEL_COUNT: usize = 1;
 
 pub const PLAYER_MOVE_SPEED: f32 = 3.0;
 pub const PLAYER_RADIUS: f32 = 0.22;
+pub const MOUSE_SENSITIVITY: f32 = 0.0025;
+pub const CAMERA_PLANE_LENGTH: f32 = 0.66;
