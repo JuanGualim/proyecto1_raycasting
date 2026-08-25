@@ -1,6 +1,10 @@
 use raylib::prelude::{KeyboardKey, RaylibDrawHandle, RaylibHandle};
 
-use crate::{config, screens};
+use crate::{
+    config,
+    game::{Game, level::LevelError},
+    screens,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Screen {
@@ -16,16 +20,18 @@ pub struct App {
     selected_level: usize,
     elapsed_seconds: f32,
     should_quit: bool,
+    game: Game,
 }
 
 impl App {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self, LevelError> {
+        Ok(Self {
             screen: Screen::Welcome,
             selected_level: 0,
             elapsed_seconds: 0.0,
             should_quit: false,
-        }
+            game: Game::load_first_level()?,
+        })
     }
 
     pub fn update(&mut self, input: &RaylibHandle, delta_time: f32) {
@@ -76,7 +82,11 @@ impl App {
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_RIGHT) {
-            self.selected_level = (self.selected_level + 1) % config::LEVEL_COUNT;
+            self.selected_level = if self.selected_level + 1 >= config::LEVEL_COUNT {
+                0
+            } else {
+                self.selected_level + 1
+            };
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
@@ -90,6 +100,7 @@ impl App {
             self.screen,
             self.selected_level,
             self.elapsed_seconds,
+            &self.game,
         );
     }
 
@@ -104,7 +115,7 @@ mod tests {
 
     #[test]
     fn application_starts_on_welcome_screen() {
-        let app = App::new();
+        let app = App::new().expect("embedded level should be valid");
 
         assert_eq!(app.screen, Screen::Welcome);
         assert_eq!(app.selected_level, 0);

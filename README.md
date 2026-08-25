@@ -1,13 +1,13 @@
 # Templo del Eclipse
 
 Proyecto 1 de Graficas por Computadora: un ray caster jugable implementado en
-Rust. El proyecto se construira incrementalmente siguiendo [PLAN.md](PLAN.md).
+Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 0 completada:** base de la aplicacion, ventana, bucle principal y flujo
-preliminar de pantallas. El renderizado por ray casting se agregara en la Fase
-1.
+**Fase 1 completada:** mapa validado, jugador/camara y renderizado de paredes
+mediante DDA. El nivel usa cinco materiales diferenciados, sombreado por cara y
+distancia, techo y piso. El movimiento y la colision se agregaran en la Fase 2.
 
 ## Requisitos
 
@@ -37,10 +37,10 @@ cargo run --release
 | --- | --- | --- |
 | Bienvenida | `Enter` | Abrir selector de nivel |
 | Bienvenida/selector | `Q` | Salir |
-| Selector | Flechas izquierda/derecha | Elegir nivel |
+| Selector | Flechas izquierda/derecha | Elegir nivel (uno disponible) |
 | Selector | `Enter` | Iniciar nivel |
-| Juego provisional | `Esc` | Pausar |
-| Juego provisional | `V` | Probar pantalla de victoria |
+| Juego | `Esc` | Pausar |
+| Juego | `V` | Probar pantalla de victoria |
 | Pausa | `Esc` | Continuar |
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
@@ -61,8 +61,12 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/main.rs`: inicializacion de raylib y bucle principal.
 - `src/config.rs`: configuracion global de ventana y simulacion.
 - `src/app.rs`: estado y transiciones de la aplicacion.
-- `src/screens/`: presentacion provisional de cada pantalla.
-- `PLAN.md`: alcance, arquitectura, fases y criterios de aceptacion.
+- `src/game/level.rs`: parser y validacion del mapa.
+- `src/game/raycast.rs`: algoritmo DDA y resultado de cada rayo.
+- `src/game/player.rs`: posicion, direccion y plano de camara.
+- `src/render/world.rs`: proyeccion y coloreado de paredes, techo y piso.
+- `src/screens/`: presentacion de las pantallas y HUD provisional.
+- `levels/`: mapas de texto incluidos en el ejecutable.
 
 ## Entrega
 

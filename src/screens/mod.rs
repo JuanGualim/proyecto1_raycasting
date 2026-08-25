@@ -1,9 +1,8 @@
 use raylib::prelude::{Color, RaylibDraw, RaylibDrawHandle};
 
-use crate::{app::Screen, config};
+use crate::{app::Screen, config, game::Game, render};
 
 const NIGHT: Color = Color::new(11, 10, 24, 255);
-const DEEP_PURPLE: Color = Color::new(31, 24, 55, 255);
 const GOLD: Color = Color::new(239, 184, 72, 255);
 const PALE_GOLD: Color = Color::new(255, 226, 156, 255);
 const MUTED: Color = Color::new(171, 164, 188, 255);
@@ -13,14 +12,18 @@ pub fn draw(
     screen: Screen,
     selected_level: usize,
     elapsed_seconds: f32,
+    game: &Game,
 ) {
     drawing.clear_background(NIGHT);
 
     match screen {
         Screen::Welcome => draw_welcome(drawing, elapsed_seconds),
         Screen::LevelSelect => draw_level_select(drawing, selected_level),
-        Screen::Playing => draw_playing_placeholder(drawing, selected_level),
-        Screen::Paused => draw_pause(drawing),
+        Screen::Playing => draw_game(drawing, selected_level, game),
+        Screen::Paused => {
+            draw_game(drawing, selected_level, game);
+            draw_pause(drawing);
+        }
         Screen::Victory => draw_victory(drawing),
     }
 }
@@ -48,7 +51,7 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
     );
     draw_centered(
         drawing,
-        "Flechas para elegir  |  ENTER para entrar",
+        "Un nivel disponible  |  ENTER para entrar",
         325,
         20,
         MUTED,
@@ -57,45 +60,30 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
     draw_phase_badge(drawing);
 }
 
-fn draw_playing_placeholder(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) {
-    drawing.draw_rectangle(
-        0,
-        0,
-        config::WINDOW_WIDTH,
-        config::WINDOW_HEIGHT / 2,
-        DEEP_PURPLE,
-    );
-    drawing.draw_rectangle(
-        0,
-        config::WINDOW_HEIGHT / 2,
-        config::WINDOW_WIDTH,
-        config::WINDOW_HEIGHT / 2,
-        Color::new(20, 17, 29, 255),
-    );
-    draw_centered(
-        drawing,
-        &format!("Nivel {} preparado", selected_level + 1),
-        205,
-        34,
+fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &Game) {
+    render::world::draw(drawing, game);
+
+    drawing.draw_rectangle(12, 12, 300, 58, Color::new(8, 7, 18, 210));
+    drawing.draw_text(
+        &format!("CAMARA {}  |  RAY CASTING DDA", selected_level + 1),
+        24,
+        23,
+        18,
         PALE_GOLD,
     );
-    draw_centered(
-        drawing,
-        "El ray caster se implementara en la Fase 1",
-        260,
-        20,
-        Color::WHITE,
-    );
-    draw_centered(
-        drawing,
-        "ESC  -  pausa     V  -  probar victoria",
-        318,
-        18,
-        MUTED,
-    );
+    drawing.draw_text("ESC pausa  |  V prueba victoria", 24, 47, 15, MUTED);
+
+    draw_material_legend(drawing);
 }
 
 fn draw_pause(drawing: &mut RaylibDrawHandle<'_>) {
+    drawing.draw_rectangle(
+        0,
+        0,
+        config::WINDOW_WIDTH,
+        config::WINDOW_HEIGHT,
+        Color::new(5, 4, 12, 210),
+    );
     draw_centered(drawing, "PAUSA", 180, 46, GOLD);
     draw_centered(drawing, "ESC  -  continuar", 280, 22, Color::WHITE);
     draw_centered(drawing, "M  -  volver al selector", 320, 20, MUTED);
@@ -120,7 +108,7 @@ fn draw_victory(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "BASE TECNICA - FASE 0";
+    let label = "RAY CASTER - FASE 1";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(
@@ -130,6 +118,25 @@ fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
         font_size,
         MUTED,
     );
+}
+
+fn draw_material_legend(drawing: &mut RaylibDrawHandle<'_>) {
+    const MATERIALS: [(&str, Color); 5] = [
+        ("1 Piedra", Color::new(102, 126, 151, 255)),
+        ("2 Obsidiana", Color::new(121, 72, 181, 255)),
+        ("3 Ladrillo", Color::new(190, 69, 67, 255)),
+        ("4 Glifos", Color::new(224, 169, 55, 255)),
+        ("5 Musgo", Color::new(63, 153, 93, 255)),
+    ];
+
+    let panel_x = config::WINDOW_WIDTH - 152;
+    drawing.draw_rectangle(panel_x, 12, 140, 120, Color::new(8, 7, 18, 205));
+
+    for (index, (label, color)) in MATERIALS.iter().enumerate() {
+        let y = 22 + index as i32 * 21;
+        drawing.draw_rectangle(panel_x + 10, y, 12, 12, *color);
+        drawing.draw_text(label, panel_x + 29, y - 1, 14, Color::WHITE);
+    }
 }
 
 fn draw_centered(
