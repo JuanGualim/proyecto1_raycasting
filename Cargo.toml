@@ -1,6 +1,9 @@
 [package]
-name = "proyecto1_Raycasting"
+name = "proyecto1_raycasting"
 version = "0.1.0"
 edition = "2024"
+description = "Ray caster jugable para el curso de Graficas por Computadora"
+publish = false
 
 [dependencies]
+raylib = "6.0.0"

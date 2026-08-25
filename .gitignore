@@ -1,1 +1,16 @@
-/target
+/target/
+
+# Archivos temporales de editores y del sistema operativo
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
+
+# Grabaciones y compilaciones locales de la entrega
+/recordings/
+/dist/
+
+
+# Agents
+PLAN.md

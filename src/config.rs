@@ -1,0 +1,8 @@
+pub const WINDOW_WIDTH: i32 = 960;
+pub const WINDOW_HEIGHT: i32 = 540;
+pub const WINDOW_TITLE: &str = "Templo del Eclipse";
+pub const TARGET_FPS: u32 = 60;
+
+/// Limita los saltos de simulacion al recuperar el foco o salir de una pausa.
+pub const MAX_DELTA_TIME: f32 = 1.0 / 20.0;
+pub const LEVEL_COUNT: usize = 3;
