@@ -5,10 +5,10 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 2 en progreso (parte 2):** el ray caster ya permite movimiento con
-`WASD`, colision circular y rotacion horizontal con el mouse. El cursor se
-captura al entrar al nivel y se libera al pausar. El minimapa se agregara en el
-ultimo incremento de esta fase.
+**Fase 2 completada:** el ray caster permite movimiento con `WASD`, colision
+circular, rotacion horizontal con mouse y pausa con liberacion del cursor. Un
+minimapa superpuesto en la esquina superior derecha muestra el nivel, la
+posicion del jugador, su direccion y su campo de vision.
 
 ## Requisitos
 
@@ -49,7 +49,7 @@ cargo run --release
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
 
-El minimapa se incorporara en la parte 3 de esta fase y el disparo en la Fase 3.
+El disparo y los sprites interactivos se incorporaran en la Fase 3.
 
 ## Comprobaciones de desarrollo
 
@@ -68,9 +68,19 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/game/level.rs`: parser y validacion del mapa.
 - `src/game/raycast.rs`: algoritmo DDA y resultado de cada rayo.
 - `src/game/player.rs`: posicion, direccion y plano de camara.
+- `src/render/minimap.rs`: minimapa superpuesto y proyeccion del jugador.
+- `src/render/palette.rs`: colores compartidos por paredes, HUD y minimapa.
 - `src/render/world.rs`: proyeccion y coloreado de paredes, techo y piso.
 - `src/screens/`: presentacion de las pantallas y HUD provisional.
 - `levels/`: mapas de texto incluidos en el ejecutable.
+
+## Verificacion manual de navegacion
+
+1. Mantener movimiento contra paredes y esquinas sin atravesarlas.
+2. Recorrer pasillos mientras se gira rapidamente con el mouse.
+3. Confirmar que el minimapa siga la posicion y orientacion del jugador.
+4. Pausar con `Esc`, comprobar que el cursor quede libre y continuar.
+5. Reiniciar con `R` y verificar el regreso a la posicion y orientacion inicial.
 
 ## Entrega
 

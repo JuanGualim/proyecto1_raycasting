@@ -9,6 +9,8 @@ use crate::{
     },
 };
 
+use super::palette;
+
 const CEILING_TOP: (u8, u8, u8) = (10, 9, 25);
 const CEILING_HORIZON: (u8, u8, u8) = (48, 34, 61);
 const FLOOR_HORIZON: (u8, u8, u8) = (48, 35, 31);
@@ -66,13 +68,7 @@ fn draw_background(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn shaded_wall_color(material: Material, side: HitSide, distance: f32) -> Color {
-    let base = match material {
-        Material::Stone => (102, 126, 151),
-        Material::Obsidian => (121, 72, 181),
-        Material::Brick => (190, 69, 67),
-        Material::Glyph => (224, 169, 55),
-        Material::Moss => (63, 153, 93),
-    };
+    let base = palette::material_rgb(material);
     let side_shade = match side {
         HitSide::Vertical => 1.0,
         HitSide::Horizontal => 0.72,

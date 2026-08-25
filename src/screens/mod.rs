@@ -1,6 +1,11 @@
 use raylib::prelude::{Color, RaylibDraw, RaylibDrawHandle};
 
-use crate::{app::Screen, config, game::Game, render};
+use crate::{
+    app::Screen,
+    config,
+    game::{Game, level::Material},
+    render,
+};
 
 const NIGHT: Color = Color::new(11, 10, 24, 255);
 const GOLD: Color = Color::new(239, 184, 72, 255);
@@ -63,7 +68,7 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
 fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &Game) {
     render::world::draw(drawing, game);
 
-    drawing.draw_rectangle(12, 12, 380, 58, Color::new(8, 7, 18, 210));
+    drawing.draw_rectangle(12, 12, 380, 58, Color::new(8, 7, 18, 220));
     drawing.draw_text(
         &format!("CAMARA {}  |  RAY CASTING DDA", selected_level + 1),
         24,
@@ -80,6 +85,8 @@ fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &G
     );
 
     draw_material_legend(drawing);
+    draw_crosshair(drawing);
+    render::minimap::draw(drawing, game);
 }
 
 fn draw_pause(drawing: &mut RaylibDrawHandle<'_>) {
@@ -114,7 +121,7 @@ fn draw_victory(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "NAVEGACION - FASE 2.2";
+    let label = "NAVEGACION COMPLETA - FASE 2";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(
@@ -127,22 +134,41 @@ fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn draw_material_legend(drawing: &mut RaylibDrawHandle<'_>) {
-    const MATERIALS: [(&str, Color); 5] = [
-        ("1 Piedra", Color::new(102, 126, 151, 255)),
-        ("2 Obsidiana", Color::new(121, 72, 181, 255)),
-        ("3 Ladrillo", Color::new(190, 69, 67, 255)),
-        ("4 Glifos", Color::new(224, 169, 55, 255)),
-        ("5 Musgo", Color::new(63, 153, 93, 255)),
+    const MATERIALS: [(&str, Material); 5] = [
+        ("1 Piedra", Material::Stone),
+        ("2 Obsidiana", Material::Obsidian),
+        ("3 Ladrillo", Material::Brick),
+        ("4 Glifos", Material::Glyph),
+        ("5 Musgo", Material::Moss),
     ];
 
-    let panel_x = config::WINDOW_WIDTH - 152;
-    drawing.draw_rectangle(panel_x, 12, 140, 120, Color::new(8, 7, 18, 205));
+    let panel_x = 12;
+    let panel_y = config::WINDOW_HEIGHT - 132;
+    drawing.draw_rectangle(panel_x, panel_y, 140, 120, Color::new(8, 7, 18, 210));
 
-    for (index, (label, color)) in MATERIALS.iter().enumerate() {
-        let y = 22 + index as i32 * 21;
-        drawing.draw_rectangle(panel_x + 10, y, 12, 12, *color);
+    for (index, (label, material)) in MATERIALS.iter().enumerate() {
+        let y = panel_y + 10 + index as i32 * 21;
+        drawing.draw_rectangle(
+            panel_x + 10,
+            y,
+            12,
+            12,
+            render::palette::material_color(*material),
+        );
         drawing.draw_text(label, panel_x + 29, y - 1, 14, Color::WHITE);
     }
+}
+
+fn draw_crosshair(drawing: &mut RaylibDrawHandle<'_>) {
+    let center_x = config::WINDOW_WIDTH / 2;
+    let center_y = config::WINDOW_HEIGHT / 2;
+    let color = Color::new(255, 238, 190, 220);
+
+    drawing.draw_line(center_x - 10, center_y, center_x - 4, center_y, color);
+    drawing.draw_line(center_x + 4, center_y, center_x + 10, center_y, color);
+    drawing.draw_line(center_x, center_y - 10, center_x, center_y - 4, color);
+    drawing.draw_line(center_x, center_y + 4, center_x, center_y + 10, color);
+    drawing.draw_circle(center_x, center_y, 1.5, GOLD);
 }
 
 fn draw_centered(
