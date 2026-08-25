@@ -196,6 +196,12 @@ impl Level {
             Tile::Wall(material) => Some(material),
         }
     }
+
+    /// El exterior se considera solido para que la colision sea segura incluso
+    /// si un mapa defectuoso o una posicion extrema alcanzan sus limites.
+    pub fn is_solid(&self, column: i32, row: i32) -> bool {
+        !self.contains(column, row) || self.wall_material_at(column, row).is_some()
+    }
 }
 
 #[cfg(test)]
@@ -219,6 +225,8 @@ mod tests {
         assert_eq!(level.spawn().y, 1.5);
         assert_eq!(level.wall_material_at(4, 2), Some(Material::Obsidian));
         assert_eq!(level.wall_material_at(2, 2), None);
+        assert!(level.is_solid(-1, 2));
+        assert!(level.is_solid(5, 2));
     }
 
     #[test]

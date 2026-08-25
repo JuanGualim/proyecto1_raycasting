@@ -50,6 +50,8 @@ impl App {
                 } else if input.is_key_pressed(KeyboardKey::KEY_V) {
                     // Transicion temporal para comprobar el flujo de pantallas.
                     self.screen = Screen::Victory;
+                } else {
+                    self.update_playing(input, delta_time);
                 }
             }
             Screen::Paused => {
@@ -92,6 +94,30 @@ impl App {
         if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
             self.screen = Screen::Playing;
         }
+    }
+
+    fn update_playing(&mut self, input: &RaylibHandle, delta_time: f32) {
+        if input.is_key_pressed(KeyboardKey::KEY_R) {
+            self.game.reset_player();
+        }
+
+        let mut forward_axis = 0.0;
+        let mut strafe_axis = 0.0;
+
+        if input.is_key_down(KeyboardKey::KEY_W) {
+            forward_axis += 1.0;
+        }
+        if input.is_key_down(KeyboardKey::KEY_S) {
+            forward_axis -= 1.0;
+        }
+        if input.is_key_down(KeyboardKey::KEY_D) {
+            strafe_axis += 1.0;
+        }
+        if input.is_key_down(KeyboardKey::KEY_A) {
+            strafe_axis -= 1.0;
+        }
+
+        self.game.move_player(forward_axis, strafe_axis, delta_time);
     }
 
     pub fn draw(&self, drawing: &mut RaylibDrawHandle<'_>) {

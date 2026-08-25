@@ -7,3 +7,6 @@ pub const TARGET_FPS: u32 = 60;
 pub const MAX_DELTA_TIME: f32 = 1.0 / 20.0;
 /// La seleccion multiple se habilitara en la Fase 4.
 pub const LEVEL_COUNT: usize = 1;
+
+pub const PLAYER_MOVE_SPEED: f32 = 3.0;
+pub const PLAYER_RADIUS: f32 = 0.22;

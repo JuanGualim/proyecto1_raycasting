@@ -71,7 +71,13 @@ fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &G
         18,
         PALE_GOLD,
     );
-    drawing.draw_text("ESC pausa  |  V prueba victoria", 24, 47, 15, MUTED);
+    drawing.draw_text(
+        "WASD mover  |  R reiniciar  |  ESC pausa",
+        24,
+        47,
+        15,
+        MUTED,
+    );
 
     draw_material_legend(drawing);
 }
