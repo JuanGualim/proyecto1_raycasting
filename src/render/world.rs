@@ -16,14 +16,16 @@ const CEILING_HORIZON: (u8, u8, u8) = (48, 34, 61);
 const FLOOR_HORIZON: (u8, u8, u8) = (48, 35, 31);
 const FLOOR_BOTTOM: (u8, u8, u8) = (13, 12, 17);
 
-pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
+pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game) -> Vec<f32> {
     draw_background(drawing);
+    let mut depth_buffer = vec![f32::INFINITY; config::WINDOW_WIDTH as usize];
 
     for screen_x in 0..config::WINDOW_WIDTH {
         let camera_x = 2.0 * screen_x as f32 / config::WINDOW_WIDTH as f32 - 1.0;
         let Some(hit) = cast_camera_ray(game.level(), game.player(), camera_x) else {
             continue;
         };
+        depth_buffer[screen_x as usize] = hit.distance;
 
         let line_height = (config::WINDOW_HEIGHT as f32 / hit.distance)
             .round()
@@ -39,6 +41,8 @@ pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
             shaded_wall_color(hit.material, hit.side, hit.distance),
         );
     }
+
+    depth_buffer
 }
 
 fn draw_background(drawing: &mut RaylibDrawHandle<'_>) {

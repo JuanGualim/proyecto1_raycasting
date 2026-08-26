@@ -66,7 +66,8 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
 }
 
 fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &Game) {
-    render::world::draw(drawing, game);
+    let depth_buffer = render::world::draw(drawing, game);
+    render::sprites::draw(drawing, game, &depth_buffer);
 
     drawing.draw_rectangle(12, 12, 380, 58, Color::new(8, 7, 18, 220));
     drawing.draw_text(
@@ -121,7 +122,7 @@ fn draw_victory(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "NAVEGACION COMPLETA - FASE 2";
+    let label = "ENTIDADES Y SPRITES - FASE 3.1";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(

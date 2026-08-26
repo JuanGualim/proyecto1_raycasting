@@ -5,10 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 2 completada:** el ray caster permite movimiento con `WASD`, colision
-circular, rotacion horizontal con mouse y pausa con liberacion del cursor. Un
-minimapa superpuesto en la esquina superior derecha muestra el nivel, la
-posicion del jugador, su direccion y su campo de vision.
+**Fase 3 en progreso (parte 1):** el mapa admite llave, portal y guardian. Las
+entidades se renderizan como sprites billboard con profundidad, orden de lejos
+a cerca y oclusion mediante el buffer de distancias de las paredes.
 
 ## Requisitos
 
@@ -49,7 +48,8 @@ cargo run --release
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
 
-El disparo y los sprites interactivos se incorporaran en la Fase 3.
+El disparo se incorporara en la parte 2; la animacion y las interacciones con
+llave y portal se completaran en la parte 3.
 
 ## Comprobaciones de desarrollo
 
@@ -65,11 +65,13 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/config.rs`: configuracion global de ventana y simulacion.
 - `src/app.rs`: estado y transiciones de la aplicacion.
 - `src/game/collision.rs`: colision circular, subpasos y deslizamiento por ejes.
+- `src/game/entities.rs`: tipos y estado base de llave, portal y guardian.
 - `src/game/level.rs`: parser y validacion del mapa.
 - `src/game/raycast.rs`: algoritmo DDA y resultado de cada rayo.
 - `src/game/player.rs`: posicion, direccion y plano de camara.
 - `src/render/minimap.rs`: minimapa superpuesto y proyeccion del jugador.
 - `src/render/palette.rs`: colores compartidos por paredes, HUD y minimapa.
+- `src/render/sprites.rs`: proyeccion billboard y oclusion de entidades.
 - `src/render/world.rs`: proyeccion y coloreado de paredes, techo y piso.
 - `src/screens/`: presentacion de las pantallas y HUD provisional.
 - `levels/`: mapas de texto incluidos en el ejecutable.

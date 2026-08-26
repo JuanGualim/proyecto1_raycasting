@@ -1,9 +1,11 @@
 pub mod collision;
+pub mod entities;
 pub mod level;
 pub mod math;
 pub mod player;
 pub mod raycast;
 
+use entities::Entity;
 use level::{Level, LevelError};
 use player::Player;
 
@@ -12,14 +14,25 @@ const ECLIPSE_CHAMBER_ONE: &str = include_str!("../../levels/eclipse_1.txt");
 pub struct Game {
     level: Level,
     player: Player,
+    entities: Vec<Entity>,
 }
 
 impl Game {
     pub fn load_first_level() -> Result<Self, LevelError> {
         let level = Level::parse(ECLIPSE_CHAMBER_ONE)?;
         let player = Player::at(level.spawn());
+        let entities = level
+            .entity_spawns()
+            .iter()
+            .copied()
+            .map(Entity::from)
+            .collect();
 
-        Ok(Self { level, player })
+        Ok(Self {
+            level,
+            player,
+            entities,
+        })
     }
 
     pub fn level(&self) -> &Level {
@@ -28,6 +41,10 @@ impl Game {
 
     pub fn player(&self) -> &Player {
         &self.player
+    }
+
+    pub fn entities(&self) -> &[Entity] {
+        &self.entities
     }
 
     pub fn move_player(&mut self, forward_axis: f32, strafe_axis: f32, delta_time: f32) {
@@ -57,6 +74,7 @@ mod tests {
     use super::{
         Game,
         collision::circle_intersects_solid,
+        entities::EntityKind,
         level::Material,
         raycast::{HitSide, cast_camera_ray},
     };
@@ -117,5 +135,20 @@ mod tests {
             assert!(hit.distance.is_finite());
             assert!(hit.distance > 0.0);
         }
+    }
+
+    #[test]
+    fn embedded_level_instantiates_key_portal_and_guardian() {
+        let game = Game::load_first_level().expect("embedded level should be valid");
+
+        assert_eq!(game.entities().len(), 3);
+        assert!(
+            [EntityKind::Key, EntityKind::Portal, EntityKind::Guardian]
+                .into_iter()
+                .all(|kind| game
+                    .entities()
+                    .iter()
+                    .any(|entity| entity.kind == kind && entity.active))
+        );
     }
 }

@@ -1,6 +1,9 @@
 use std::{error::Error, fmt};
 
-use super::math::Vec2;
+use super::{
+    entities::{EntityKind, EntitySpawn},
+    math::Vec2,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Material {
@@ -88,6 +91,7 @@ pub struct Level {
     height: usize,
     tiles: Vec<Tile>,
     spawn: Vec2,
+    entity_spawns: Vec<EntitySpawn>,
 }
 
 impl Level {
@@ -107,6 +111,7 @@ impl Level {
 
         let mut tiles = Vec::with_capacity(width * height);
         let mut spawn = None;
+        let mut entity_spawns = Vec::new();
 
         for (row_index, row) in rows.iter().enumerate() {
             let found_width = row.chars().count();
@@ -128,13 +133,26 @@ impl Level {
                         spawn = Some(Vec2::new(column_index as f32 + 0.5, row_index as f32 + 0.5));
                         Tile::Empty
                     }
-                    symbol => Material::from_symbol(symbol).map(Tile::Wall).ok_or(
-                        LevelError::InvalidSymbol {
-                            symbol,
-                            column: column_index + 1,
-                            row: row_index + 1,
-                        },
-                    )?,
+                    symbol => {
+                        if let Some(kind) = EntityKind::from_symbol(symbol) {
+                            entity_spawns.push(EntitySpawn {
+                                kind,
+                                position: Vec2::new(
+                                    column_index as f32 + 0.5,
+                                    row_index as f32 + 0.5,
+                                ),
+                            });
+                            Tile::Empty
+                        } else {
+                            Material::from_symbol(symbol).map(Tile::Wall).ok_or(
+                                LevelError::InvalidSymbol {
+                                    symbol,
+                                    column: column_index + 1,
+                                    row: row_index + 1,
+                                },
+                            )?
+                        }
+                    }
                 };
                 tiles.push(tile);
             }
@@ -145,6 +163,7 @@ impl Level {
             height,
             tiles,
             spawn: spawn.ok_or(LevelError::MissingSpawn)?,
+            entity_spawns,
         };
         level.validate_closed_border()?;
 
@@ -181,6 +200,10 @@ impl Level {
         self.spawn
     }
 
+    pub fn entity_spawns(&self) -> &[EntitySpawn] {
+        &self.entity_spawns
+    }
+
     pub fn contains(&self, column: i32, row: i32) -> bool {
         column >= 0 && row >= 0 && (column as usize) < self.width && (row as usize) < self.height
     }
@@ -207,6 +230,7 @@ impl Level {
 #[cfg(test)]
 mod tests {
     use super::{Level, LevelError, Material};
+    use crate::game::{entities::EntityKind, math::Vec2};
 
     const VALID_LEVEL: &str = "\
 11111
@@ -260,5 +284,19 @@ mod tests {
             Some(LevelError::InvalidSymbol { symbol: 'X', .. })
         ));
         assert_eq!(multiple_spawns, Some(LevelError::MultipleSpawns));
+    }
+
+    #[test]
+    fn parses_entity_symbols_as_walkable_centered_spawns() {
+        let level = Level::parse("111111\n1SKGE1\n1....1\n111111").expect("valid entities");
+
+        assert_eq!(level.entity_spawns().len(), 3);
+        assert_eq!(level.entity_spawns()[0].kind, EntityKind::Key);
+        assert_eq!(level.entity_spawns()[0].position, Vec2::new(2.5, 1.5));
+        assert_eq!(level.entity_spawns()[1].kind, EntityKind::Guardian);
+        assert_eq!(level.entity_spawns()[2].kind, EntityKind::Portal);
+        assert!(!level.is_solid(2, 1));
+        assert!(!level.is_solid(3, 1));
+        assert!(!level.is_solid(4, 1));
     }
 }
