@@ -107,3 +107,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 La version final incluira instrucciones completas, creditos de recursos, enlace
 al video demostrativo y una lista de los objetivos de la rubrica implementados.
+
+
+
+
