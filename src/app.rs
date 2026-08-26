@@ -1,4 +1,4 @@
-use raylib::prelude::{KeyboardKey, RaylibDrawHandle, RaylibHandle};
+use raylib::prelude::{KeyboardKey, MouseButton, RaylibDrawHandle, RaylibHandle};
 
 use crate::{
     config,
@@ -97,11 +97,16 @@ impl App {
     }
 
     fn update_playing(&mut self, input: &RaylibHandle, delta_time: f32) {
+        self.game.tick(delta_time);
         let rotation = input.get_mouse_delta().x * config::MOUSE_SENSITIVITY;
         self.game.rotate_player(rotation);
 
         if input.is_key_pressed(KeyboardKey::KEY_R) {
-            self.game.reset_player();
+            self.game.reset_level();
+        }
+
+        if input.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
+            self.game.try_shoot();
         }
 
         let mut forward_axis = 0.0;

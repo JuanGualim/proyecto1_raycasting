@@ -29,6 +29,8 @@ pub struct Entity {
     pub kind: EntityKind,
     pub position: Vec2,
     pub active: bool,
+    pub health: i32,
+    pub hit_flash_remaining: f32,
 }
 
 impl From<EntitySpawn> for Entity {
@@ -37,6 +39,11 @@ impl From<EntitySpawn> for Entity {
             kind: spawn.kind,
             position: spawn.position,
             active: true,
+            health: match spawn.kind {
+                EntityKind::Guardian => crate::config::GUARDIAN_MAX_HEALTH,
+                EntityKind::Key | EntityKind::Portal => 0,
+            },
+            hit_flash_remaining: 0.0,
         }
     }
 }

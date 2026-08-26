@@ -36,7 +36,7 @@ pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game, depth_buffer: &[f32
         let Some(projection) = project(entity, game.player()) else {
             continue;
         };
-        draw_projected_sprite(drawing, entity.kind, projection, depth_buffer);
+        draw_projected_sprite(drawing, entity, projection, depth_buffer);
     }
 }
 
@@ -81,7 +81,7 @@ fn project(entity: &Entity, player: &Player) -> Option<SpriteProjection> {
 
 fn draw_projected_sprite(
     drawing: &mut RaylibDrawHandle<'_>,
-    kind: EntityKind,
+    entity: &Entity,
     projection: SpriteProjection,
     depth_buffer: &[f32],
 ) {
@@ -104,7 +104,7 @@ fn draw_projected_sprite(
             .clamp(0.0, (SPRITE_WIDTH - 1) as f32) as i32;
 
         for texture_y in 0..SPRITE_HEIGHT {
-            let Some(color) = sample_sprite(kind, texture_x, texture_y) else {
+            let Some(color) = sample_sprite(entity, texture_x, texture_y) else {
                 continue;
             };
             let block_top =
@@ -129,11 +129,11 @@ fn sprite_scale(kind: EntityKind) -> (f32, f32) {
     }
 }
 
-fn sample_sprite(kind: EntityKind, x: i32, y: i32) -> Option<Color> {
-    match kind {
+fn sample_sprite(entity: &Entity, x: i32, y: i32) -> Option<Color> {
+    match entity.kind {
         EntityKind::Key => sample_key(x, y),
         EntityKind::Portal => sample_portal(x, y),
-        EntityKind::Guardian => sample_guardian(x, y),
+        EntityKind::Guardian => sample_guardian(x, y, entity.hit_flash_remaining > 0.0),
     }
 }
 
@@ -182,7 +182,7 @@ fn sample_portal(x: i32, y: i32) -> Option<Color> {
     }
 }
 
-fn sample_guardian(x: i32, y: i32) -> Option<Color> {
+fn sample_guardian(x: i32, y: i32, hit_flash: bool) -> Option<Color> {
     const ARMOR: Color = Color::new(74, 53, 100, 255);
     const ARMOR_LIGHT: Color = Color::new(129, 92, 155, 255);
     const SHADOW: Color = Color::new(38, 28, 55, 255);
@@ -197,7 +197,7 @@ fn sample_guardian(x: i32, y: i32) -> Option<Color> {
     let arms = (11..=16).contains(&y) && (1..=14).contains(&x);
     let legs = (19..=23).contains(&y) && ((4..=6).contains(&x) || (9..=11).contains(&x));
 
-    if eyes {
+    let base_color = if eyes {
         Some(EYE)
     } else if y == 14 && (7..=8).contains(&x) {
         Some(CORE)
@@ -211,6 +211,12 @@ fn sample_guardian(x: i32, y: i32) -> Option<Color> {
         }
     } else {
         None
+    };
+
+    if hit_flash && base_color.is_some() {
+        Some(Color::new(255, 216, 205, 255))
+    } else {
+        base_color
     }
 }
 
@@ -238,6 +244,8 @@ mod tests {
             kind: EntityKind::Guardian,
             position,
             active: true,
+            health: crate::config::GUARDIAN_MAX_HEALTH,
+            hit_flash_remaining: 0.0,
         }
     }
 

@@ -1,13 +1,16 @@
 pub mod collision;
+pub mod combat;
 pub mod entities;
 pub mod level;
 pub mod math;
 pub mod player;
 pub mod raycast;
 
-use entities::Entity;
+use combat::{ShotOutcome, ray_circle_hit_distance};
+use entities::{Entity, EntityKind};
 use level::{Level, LevelError};
 use player::Player;
+use raycast::cast_ray;
 
 const ECLIPSE_CHAMBER_ONE: &str = include_str!("../../levels/eclipse_1.txt");
 
@@ -15,11 +18,19 @@ pub struct Game {
     level: Level,
     player: Player,
     entities: Vec<Entity>,
+    shot_cooldown_remaining: f32,
+    muzzle_flash_remaining: f32,
+    shot_feedback_remaining: f32,
+    last_shot: Option<ShotOutcome>,
 }
 
 impl Game {
     pub fn load_first_level() -> Result<Self, LevelError> {
         let level = Level::parse(ECLIPSE_CHAMBER_ONE)?;
+        Ok(Self::from_level(level))
+    }
+
+    fn from_level(level: Level) -> Self {
         let player = Player::at(level.spawn());
         let entities = level
             .entity_spawns()
@@ -28,11 +39,15 @@ impl Game {
             .map(Entity::from)
             .collect();
 
-        Ok(Self {
+        Self {
             level,
             player,
             entities,
-        })
+            shot_cooldown_remaining: 0.0,
+            muzzle_flash_remaining: 0.0,
+            shot_feedback_remaining: 0.0,
+            last_shot: None,
+        }
     }
 
     pub fn level(&self) -> &Level {
@@ -62,8 +77,99 @@ impl Game {
         self.player.rotate(angle_radians);
     }
 
-    pub fn reset_player(&mut self) {
+    pub fn tick(&mut self, delta_time: f32) {
+        if !delta_time.is_finite() || delta_time <= 0.0 {
+            return;
+        }
+
+        self.shot_cooldown_remaining = (self.shot_cooldown_remaining - delta_time).max(0.0);
+        self.muzzle_flash_remaining = (self.muzzle_flash_remaining - delta_time).max(0.0);
+        self.shot_feedback_remaining = (self.shot_feedback_remaining - delta_time).max(0.0);
+        for entity in &mut self.entities {
+            entity.hit_flash_remaining = (entity.hit_flash_remaining - delta_time).max(0.0);
+        }
+    }
+
+    pub fn try_shoot(&mut self) -> ShotOutcome {
+        if self.shot_cooldown_remaining > 0.0 {
+            return ShotOutcome::Cooldown;
+        }
+
+        self.shot_cooldown_remaining = crate::config::SHOT_COOLDOWN;
+        self.muzzle_flash_remaining = crate::config::MUZZLE_FLASH_DURATION;
+
+        let wall_distance = cast_ray(&self.level, self.player.position, self.player.direction)
+            .map_or(f32::INFINITY, |hit| hit.distance);
+        let nearest_guardian = self
+            .entities
+            .iter()
+            .enumerate()
+            .filter(|(_, entity)| entity.active && entity.kind == EntityKind::Guardian)
+            .filter_map(|(index, entity)| {
+                ray_circle_hit_distance(
+                    self.player.position,
+                    self.player.direction,
+                    entity.position,
+                    crate::config::GUARDIAN_HIT_RADIUS,
+                )
+                .map(|distance| (index, distance))
+            })
+            .min_by(|left, right| left.1.total_cmp(&right.1));
+
+        let outcome = match nearest_guardian {
+            None => ShotOutcome::Miss,
+            Some((_, distance)) if distance >= wall_distance => ShotOutcome::Blocked,
+            Some((index, _)) => {
+                let guardian = &mut self.entities[index];
+                guardian.health = (guardian.health - 1).max(0);
+                guardian.hit_flash_remaining = crate::config::GUARDIAN_HIT_FLASH_DURATION;
+                let destroyed = guardian.health == 0;
+                if destroyed {
+                    guardian.active = false;
+                }
+                ShotOutcome::Hit { destroyed }
+            }
+        };
+
+        self.last_shot = Some(outcome);
+        self.shot_feedback_remaining = crate::config::SHOT_FEEDBACK_DURATION;
+        outcome
+    }
+
+    pub fn can_shoot(&self) -> bool {
+        self.shot_cooldown_remaining <= 0.0
+    }
+
+    pub fn muzzle_flash_strength(&self) -> f32 {
+        (self.muzzle_flash_remaining / crate::config::MUZZLE_FLASH_DURATION).clamp(0.0, 1.0)
+    }
+
+    pub fn visible_shot_feedback(&self) -> Option<ShotOutcome> {
+        (self.shot_feedback_remaining > 0.0)
+            .then_some(self.last_shot)
+            .flatten()
+    }
+
+    pub fn guardian_health(&self) -> i32 {
+        self.entities
+            .iter()
+            .find(|entity| entity.kind == EntityKind::Guardian)
+            .map_or(0, |guardian| guardian.health)
+    }
+
+    pub fn reset_level(&mut self) {
         self.player = Player::at(self.level.spawn());
+        self.entities = self
+            .level
+            .entity_spawns()
+            .iter()
+            .copied()
+            .map(Entity::from)
+            .collect();
+        self.shot_cooldown_remaining = 0.0;
+        self.muzzle_flash_remaining = 0.0;
+        self.shot_feedback_remaining = 0.0;
+        self.last_shot = None;
     }
 }
 
@@ -74,8 +180,9 @@ mod tests {
     use super::{
         Game,
         collision::circle_intersects_solid,
+        combat::ShotOutcome,
         entities::EntityKind,
-        level::Material,
+        level::{Level, Material},
         raycast::{HitSide, cast_camera_ray},
     };
 
@@ -89,7 +196,7 @@ mod tests {
         assert!((game.player().position.x - (spawn.x + 0.3)).abs() < 0.000_1);
         assert!((game.player().position.y - spawn.y).abs() < 0.000_1);
 
-        game.reset_player();
+        game.reset_level();
         assert_eq!(game.player().position, spawn);
     }
 
@@ -150,5 +257,49 @@ mod tests {
                     .iter()
                     .any(|entity| entity.kind == kind && entity.active))
         );
+    }
+
+    #[test]
+    fn shots_damage_destroy_and_reset_the_guardian() {
+        let mut game = Game::load_first_level().expect("embedded level should be valid");
+
+        assert_eq!(game.try_shoot(), ShotOutcome::Hit { destroyed: false });
+        assert_eq!(game.guardian_health(), 2);
+        assert!(!game.can_shoot());
+        assert_eq!(game.try_shoot(), ShotOutcome::Cooldown);
+        assert!(game.muzzle_flash_strength() > 0.0);
+
+        game.tick(crate::config::SHOT_COOLDOWN);
+        assert_eq!(game.try_shoot(), ShotOutcome::Hit { destroyed: false });
+        game.tick(crate::config::SHOT_COOLDOWN);
+        assert_eq!(game.try_shoot(), ShotOutcome::Hit { destroyed: true });
+        assert_eq!(game.guardian_health(), 0);
+        assert!(
+            game.entities()
+                .iter()
+                .any(|entity| entity.kind == EntityKind::Guardian && !entity.active)
+        );
+
+        game.reset_level();
+        assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
+        assert!(game.can_shoot());
+    }
+
+    #[test]
+    fn wall_blocks_a_guardian_aligned_with_the_crosshair() {
+        let level = Level::parse("1111111\n1S.1G.1\n1.....1\n1111111").expect("valid room");
+        let mut game = Game::from_level(level);
+
+        assert_eq!(game.try_shoot(), ShotOutcome::Blocked);
+        assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
+    }
+
+    #[test]
+    fn shot_misses_when_no_guardian_intersects_the_center_ray() {
+        let level = Level::parse("11111\n1S..1\n1.G.1\n1...1\n11111").expect("valid room");
+        let mut game = Game::from_level(level);
+
+        assert_eq!(game.try_shoot(), ShotOutcome::Miss);
+        assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
     }
 }

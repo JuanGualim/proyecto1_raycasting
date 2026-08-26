@@ -12,3 +12,10 @@ pub const PLAYER_MOVE_SPEED: f32 = 3.0;
 pub const PLAYER_RADIUS: f32 = 0.22;
 pub const MOUSE_SENSITIVITY: f32 = 0.0025;
 pub const CAMERA_PLANE_LENGTH: f32 = 0.66;
+
+pub const SHOT_COOLDOWN: f32 = 0.28;
+pub const MUZZLE_FLASH_DURATION: f32 = 0.075;
+pub const SHOT_FEEDBACK_DURATION: f32 = 0.16;
+pub const GUARDIAN_HIT_FLASH_DURATION: f32 = 0.13;
+pub const GUARDIAN_HIT_RADIUS: f32 = 0.34;
+pub const GUARDIAN_MAX_HEALTH: i32 = 3;

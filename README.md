@@ -5,9 +5,10 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 3 en progreso (parte 1):** el mapa admite llave, portal y guardian. Las
-entidades se renderizan como sprites billboard con profundidad, orden de lejos
-a cerca y oclusion mediante el buffer de distancias de las paredes.
+**Fase 3 en progreso (parte 2):** el jugador puede disparar con clic izquierdo.
+El sistema hitscan respeta las paredes, aplica cooldown y elimina al guardian
+despues de tres impactos. El arma, fogonazo, reticula y sprite muestran feedback
+visual del resultado.
 
 ## Requisitos
 
@@ -41,15 +42,16 @@ cargo run --release
 | Selector | `Enter` | Iniciar nivel |
 | Juego | `W`, `A`, `S`, `D` | Moverse y desplazarse lateralmente |
 | Juego | Movimiento horizontal del mouse | Girar la camara |
-| Juego | `R` | Regresar al inicio del nivel |
+| Juego | Clic izquierdo | Disparar |
+| Juego | `R` | Reiniciar posicion y combate |
 | Juego | `Esc` | Pausar |
 | Juego | `V` | Probar pantalla de victoria |
 | Pausa | `Esc` | Continuar |
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
 
-El disparo se incorporara en la parte 2; la animacion y las interacciones con
-llave y portal se completaran en la parte 3.
+La animacion completa y las interacciones con llave y portal se terminaran en
+la parte 3.
 
 ## Comprobaciones de desarrollo
 
@@ -65,6 +67,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/config.rs`: configuracion global de ventana y simulacion.
 - `src/app.rs`: estado y transiciones de la aplicacion.
 - `src/game/collision.rs`: colision circular, subpasos y deslizamiento por ejes.
+- `src/game/combat.rs`: interseccion hitscan y resultados de disparo.
 - `src/game/entities.rs`: tipos y estado base de llave, portal y guardian.
 - `src/game/level.rs`: parser y validacion del mapa.
 - `src/game/raycast.rs`: algoritmo DDA y resultado de cada rayo.

@@ -68,8 +68,9 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
 fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &Game) {
     let depth_buffer = render::world::draw(drawing, game);
     render::sprites::draw(drawing, game, &depth_buffer);
+    render::weapon::draw(drawing, game);
 
-    drawing.draw_rectangle(12, 12, 380, 58, Color::new(8, 7, 18, 220));
+    drawing.draw_rectangle(12, 12, 410, 80, Color::new(8, 7, 18, 220));
     drawing.draw_text(
         &format!("CAMARA {}  |  RAY CASTING DDA", selected_level + 1),
         24,
@@ -78,15 +79,35 @@ fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &G
         PALE_GOLD,
     );
     drawing.draw_text(
-        "WASD mover  |  Mouse girar  |  ESC pausa",
+        "WASD mover  |  Mouse girar  |  Clic disparar",
         24,
         47,
         15,
         MUTED,
     );
+    drawing.draw_text(
+        &format!(
+            "GUARDIAN {}/{}  |  DISPARO {}",
+            game.guardian_health(),
+            config::GUARDIAN_MAX_HEALTH,
+            if game.can_shoot() {
+                "LISTO"
+            } else {
+                "CARGANDO"
+            }
+        ),
+        24,
+        66,
+        15,
+        if game.guardian_health() > 0 {
+            Color::new(255, 155, 112, 255)
+        } else {
+            Color::new(126, 224, 157, 255)
+        },
+    );
 
     draw_material_legend(drawing);
-    draw_crosshair(drawing);
+    draw_crosshair(drawing, game);
     render::minimap::draw(drawing, game);
 }
 
@@ -122,7 +143,7 @@ fn draw_victory(drawing: &mut RaylibDrawHandle<'_>) {
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "ENTIDADES Y SPRITES - FASE 3.1";
+    let label = "COMBATE HITSCAN - FASE 3.2";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(
@@ -160,10 +181,14 @@ fn draw_material_legend(drawing: &mut RaylibDrawHandle<'_>) {
     }
 }
 
-fn draw_crosshair(drawing: &mut RaylibDrawHandle<'_>) {
+fn draw_crosshair(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
     let center_x = config::WINDOW_WIDTH / 2;
     let center_y = config::WINDOW_HEIGHT / 2;
-    let color = Color::new(255, 238, 190, 220);
+    let color = match game.visible_shot_feedback() {
+        Some(crate::game::combat::ShotOutcome::Hit { .. }) => Color::new(255, 92, 82, 255),
+        Some(crate::game::combat::ShotOutcome::Blocked) => Color::new(116, 184, 255, 255),
+        _ => Color::new(255, 238, 190, 220),
+    };
 
     drawing.draw_line(center_x - 10, center_y, center_x - 4, center_y, color);
     drawing.draw_line(center_x + 4, center_y, center_x + 10, center_y, color);
