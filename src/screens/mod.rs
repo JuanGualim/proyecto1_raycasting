@@ -29,7 +29,7 @@ pub fn draw(
             draw_game(drawing, selected_level, game);
             draw_pause(drawing);
         }
-        Screen::Victory => draw_victory(drawing),
+        Screen::Victory => draw_victory(drawing, game),
     }
 }
 
@@ -70,7 +70,7 @@ fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &G
     render::sprites::draw(drawing, game, &depth_buffer);
     render::weapon::draw(drawing, game);
 
-    drawing.draw_rectangle(12, 12, 410, 80, Color::new(8, 7, 18, 220));
+    drawing.draw_rectangle(12, 12, 445, 101, Color::new(8, 7, 18, 220));
     drawing.draw_text(
         &format!("CAMARA {}  |  RAY CASTING DDA", selected_level + 1),
         24,
@@ -105,9 +105,33 @@ fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &G
             Color::new(126, 224, 157, 255)
         },
     );
+    drawing.draw_text(
+        &format!(
+            "LLAVE {}  |  PORTAL {}",
+            if game.has_key() {
+                "OBTENIDA"
+            } else {
+                "PENDIENTE"
+            },
+            if game.portal_ready() {
+                "ACTIVO"
+            } else {
+                "BLOQUEADO"
+            }
+        ),
+        24,
+        86,
+        15,
+        if game.portal_ready() {
+            Color::new(91, 239, 207, 255)
+        } else {
+            GOLD
+        },
+    );
 
     draw_material_legend(drawing);
     draw_crosshair(drawing, game);
+    draw_interaction_feedback(drawing, game);
     render::minimap::draw(drawing, game);
 }
 
@@ -124,26 +148,41 @@ fn draw_pause(drawing: &mut RaylibDrawHandle<'_>) {
     draw_centered(drawing, "M  -  volver al selector", 320, 20, MUTED);
 }
 
-fn draw_victory(drawing: &mut RaylibDrawHandle<'_>) {
-    draw_centered(drawing, "CAMARA COMPLETADA", 170, 42, GOLD);
+fn draw_victory(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
+    for radius in (80..=360).step_by(40) {
+        drawing.draw_circle_lines(
+            config::WINDOW_WIDTH / 2,
+            210,
+            radius as f32,
+            Color::new(68, 185, 169, 70),
+        );
+    }
+    draw_centered(drawing, "TEMPLO PURIFICADO", 115, 46, GOLD);
     draw_centered(
         drawing,
-        "La condicion real de victoria llegara en la Fase 3",
-        250,
-        20,
+        "Llave recuperada  |  Guardian neutralizado  |  Portal activado",
+        198,
+        19,
         PALE_GOLD,
     );
     draw_centered(
         drawing,
+        &format!("TIEMPO  {:.1} segundos", game.level_elapsed_seconds()),
+        250,
+        25,
+        Color::new(115, 238, 205, 255),
+    );
+    draw_centered(
+        drawing,
         "ENTER  -  volver al selector",
-        330,
+        345,
         21,
         Color::WHITE,
     );
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "COMBATE HITSCAN - FASE 3.2";
+    let label = "CICLO JUGABLE COMPLETO - FASE 3";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(
@@ -195,6 +234,33 @@ fn draw_crosshair(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
     drawing.draw_line(center_x, center_y - 10, center_x, center_y - 4, color);
     drawing.draw_line(center_x, center_y + 4, center_x, center_y + 10, color);
     drawing.draw_circle(center_x, center_y, 1.5, GOLD);
+}
+
+fn draw_interaction_feedback(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
+    use crate::game::objective::InteractionFeedback;
+
+    let Some(feedback) = game.visible_interaction_feedback() else {
+        return;
+    };
+    let (label, color) = match feedback {
+        InteractionFeedback::KeyCollected => {
+            ("LLAVE SOLAR OBTENIDA", Color::new(255, 218, 88, 255))
+        }
+        InteractionFeedback::PortalNeedsKey => (
+            "EL PORTAL REQUIERE LA LLAVE",
+            Color::new(185, 177, 203, 255),
+        ),
+        InteractionFeedback::PortalNeedsGuardian => (
+            "EL GUARDIAN AUN PROTEGE EL PORTAL",
+            Color::new(255, 125, 105, 255),
+        ),
+    };
+    let font_size = 18;
+    let width = drawing.measure_text(label, font_size);
+    let x = (config::WINDOW_WIDTH - width) / 2;
+    let y = config::WINDOW_HEIGHT / 2 + 51;
+    drawing.draw_rectangle(x - 10, y - 5, width + 20, 28, Color::new(8, 7, 18, 215));
+    drawing.draw_text(label, x, y, font_size, color);
 }
 
 fn draw_centered(

@@ -36,7 +36,13 @@ pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game, depth_buffer: &[f32
         let Some(projection) = project(entity, game.player()) else {
             continue;
         };
-        draw_projected_sprite(drawing, entity, projection, depth_buffer);
+        draw_projected_sprite(
+            drawing,
+            entity,
+            projection,
+            depth_buffer,
+            game.portal_ready(),
+        );
     }
 }
 
@@ -64,7 +70,13 @@ fn project(entity: &Entity, player: &Player) -> Option<SpriteProjection> {
     let height = (config::WINDOW_HEIGHT as f32 / depth) * height_scale;
     let width = height * width_scale;
     let center_x = config::WINDOW_WIDTH as f32 * 0.5 * (1.0 + camera_x / depth);
-    let center_y = config::WINDOW_HEIGHT as f32 * 0.5;
+    let animation_frame = entity.animation_frame();
+    let vertical_offset = match entity.kind {
+        EntityKind::Key => [0.0, -0.035, -0.06, -0.035][animation_frame],
+        EntityKind::Portal => [0.0, -0.008, -0.014, -0.008, 0.0, 0.006][animation_frame],
+        EntityKind::Guardian => [0.0, -0.012, 0.0, 0.012][animation_frame],
+    };
+    let center_y = config::WINDOW_HEIGHT as f32 * 0.5 + height * vertical_offset;
 
     if !height.is_finite() || !width.is_finite() || height <= 0.0 || width <= 0.0 {
         return None;
@@ -84,6 +96,7 @@ fn draw_projected_sprite(
     entity: &Entity,
     projection: SpriteProjection,
     depth_buffer: &[f32],
+    portal_ready: bool,
 ) {
     let first_column = projection.left.floor().max(0.0) as i32;
     let last_column = (projection.left + projection.width)
@@ -104,7 +117,7 @@ fn draw_projected_sprite(
             .clamp(0.0, (SPRITE_WIDTH - 1) as f32) as i32;
 
         for texture_y in 0..SPRITE_HEIGHT {
-            let Some(color) = sample_sprite(entity, texture_x, texture_y) else {
+            let Some(color) = sample_sprite(entity, texture_x, texture_y, portal_ready) else {
                 continue;
             };
             let block_top =
@@ -129,15 +142,16 @@ fn sprite_scale(kind: EntityKind) -> (f32, f32) {
     }
 }
 
-fn sample_sprite(entity: &Entity, x: i32, y: i32) -> Option<Color> {
+fn sample_sprite(entity: &Entity, x: i32, y: i32, portal_ready: bool) -> Option<Color> {
+    let frame = entity.animation_frame();
     match entity.kind {
-        EntityKind::Key => sample_key(x, y),
-        EntityKind::Portal => sample_portal(x, y),
-        EntityKind::Guardian => sample_guardian(x, y, entity.hit_flash_remaining > 0.0),
+        EntityKind::Key => sample_key(x, y, frame),
+        EntityKind::Portal => sample_portal(x, y, frame, portal_ready),
+        EntityKind::Guardian => sample_guardian(x, y, frame, entity.hit_flash_remaining > 0.0),
     }
 }
 
-fn sample_key(x: i32, y: i32) -> Option<Color> {
+fn sample_key(x: i32, y: i32, frame: usize) -> Option<Color> {
     const GOLD: Color = Color::new(255, 205, 70, 255);
     const HIGHLIGHT: Color = Color::new(255, 244, 165, 255);
     let offset_x = x as f32 - 7.5;
@@ -148,7 +162,8 @@ fn sample_key(x: i32, y: i32) -> Option<Color> {
     let tooth = ((9..=13).contains(&x) && (16..=18).contains(&y))
         || ((9..=12).contains(&x) && (20..=22).contains(&y));
 
-    if x == 7 && ring {
+    let shimmer_column = 5 + (frame as i32 * 2) % 6;
+    if x == shimmer_column && (ring || shaft) {
         Some(HIGHLIGHT)
     } else if ring || shaft || tooth {
         Some(GOLD)
@@ -157,7 +172,7 @@ fn sample_key(x: i32, y: i32) -> Option<Color> {
     }
 }
 
-fn sample_portal(x: i32, y: i32) -> Option<Color> {
+fn sample_portal(x: i32, y: i32, frame: usize, ready: bool) -> Option<Color> {
     const FRAME: Color = Color::new(83, 211, 204, 255);
     const FRAME_LIGHT: Color = Color::new(164, 255, 232, 255);
     const ENERGY: Color = Color::new(111, 61, 190, 235);
@@ -169,11 +184,18 @@ fn sample_portal(x: i32, y: i32) -> Option<Color> {
     let pillars = (1..=4).contains(&x) || (11..=14).contains(&x);
     let inner_energy = (5..=10).contains(&x) && (7..=22).contains(&y);
 
-    if (arch || (pillars && (7..=23).contains(&y))) && (x == 3 || y <= 4) {
+    const LOCKED_FRAME: Color = Color::new(91, 104, 126, 255);
+    const LOCKED_ENERGY: Color = Color::new(55, 49, 75, 235);
+
+    if !ready && (arch || (pillars && (7..=23).contains(&y))) {
+        Some(LOCKED_FRAME)
+    } else if !ready && inner_energy {
+        Some(LOCKED_ENERGY)
+    } else if (arch || (pillars && (7..=23).contains(&y))) && (x == 3 || y <= 4) {
         Some(FRAME_LIGHT)
     } else if arch || (pillars && (7..=23).contains(&y)) {
         Some(FRAME)
-    } else if inner_energy && (x + y) % 5 == 0 {
+    } else if inner_energy && (x + y + frame as i32) % 5 == 0 {
         Some(ENERGY_LIGHT)
     } else if inner_energy {
         Some(ENERGY)
@@ -182,7 +204,7 @@ fn sample_portal(x: i32, y: i32) -> Option<Color> {
     }
 }
 
-fn sample_guardian(x: i32, y: i32, hit_flash: bool) -> Option<Color> {
+fn sample_guardian(x: i32, y: i32, frame: usize, hit_flash: bool) -> Option<Color> {
     const ARMOR: Color = Color::new(74, 53, 100, 255);
     const ARMOR_LIGHT: Color = Color::new(129, 92, 155, 255);
     const SHADOW: Color = Color::new(38, 28, 55, 255);
@@ -192,9 +214,10 @@ fn sample_guardian(x: i32, y: i32, hit_flash: bool) -> Option<Color> {
     let horns =
         (y <= 4 && ((2..=4).contains(&x) || (11..=13).contains(&x))) && (x + y <= 6 || x - y >= 9);
     let head = (4..=10).contains(&y) && (4..=11).contains(&x);
-    let eyes = (y == 7 || y == 8) && (x == 5 || x == 10);
+    let eyes = (y == 7 || (y == 8 && frame != 3)) && (x == 5 || x == 10);
     let torso = (10..=19).contains(&y) && (3..=12).contains(&x);
-    let arms = (11..=16).contains(&y) && (1..=14).contains(&x);
+    let arm_offset = if frame.is_multiple_of(2) { 0 } else { 1 };
+    let arms = (11 + arm_offset..=16 + arm_offset).contains(&y) && (1..=14).contains(&x);
     let legs = (19..=23).contains(&y) && ((4..=6).contains(&x) || (9..=11).contains(&x));
 
     let base_color = if eyes {
@@ -246,6 +269,7 @@ mod tests {
             active: true,
             health: crate::config::GUARDIAN_MAX_HEALTH,
             hit_flash_remaining: 0.0,
+            animation_time: 0.0,
         }
     }
 

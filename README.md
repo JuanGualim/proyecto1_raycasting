@@ -5,10 +5,10 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 3 en progreso (parte 2):** el jugador puede disparar con clic izquierdo.
-El sistema hitscan respeta las paredes, aplica cooldown y elimina al guardian
-despues de tres impactos. El arma, fogonazo, reticula y sprite muestran feedback
-visual del resultado.
+**Fase 3 completada:** el nivel ya tiene un ciclo jugable completo. El jugador
+debe eliminar al guardian, recoger la llave solar y entrar al portal activado.
+Guardian, llave y portal usan animacion por cuadros; al cumplir los objetivos se
+muestra una pantalla real de exito.
 
 ## Requisitos
 
@@ -45,13 +45,12 @@ cargo run --release
 | Juego | Clic izquierdo | Disparar |
 | Juego | `R` | Reiniciar posicion y combate |
 | Juego | `Esc` | Pausar |
-| Juego | `V` | Probar pantalla de victoria |
 | Pausa | `Esc` | Continuar |
 | Pausa | `M` | Volver al selector |
 | Victoria | `Enter` | Volver al selector |
 
-La animacion completa y las interacciones con llave y portal se terminaran en
-la parte 3.
+La condicion de victoria requiere eliminar al guardian, recoger la llave y
+alcanzar el portal.
 
 ## Comprobaciones de desarrollo
 
@@ -70,6 +69,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/game/combat.rs`: interseccion hitscan y resultados de disparo.
 - `src/game/entities.rs`: tipos y estado base de llave, portal y guardian.
 - `src/game/level.rs`: parser y validacion del mapa.
+- `src/game/objective.rs`: eventos y mensajes del objetivo del nivel.
 - `src/game/raycast.rs`: algoritmo DDA y resultado de cada rayo.
 - `src/game/player.rs`: posicion, direccion y plano de camara.
 - `src/render/minimap.rs`: minimapa superpuesto y proyeccion del jugador.
@@ -86,6 +86,14 @@ cargo clippy --all-targets --all-features -- -D warnings
 3. Confirmar que el minimapa siga la posicion y orientacion del jugador.
 4. Pausar con `Esc`, comprobar que el cursor quede libre y continuar.
 5. Reiniciar con `R` y verificar el regreso a la posicion y orientacion inicial.
+
+## Verificacion manual del ciclo jugable
+
+1. Disparar tres veces al guardian y confirmar su eliminacion.
+2. Recorrer el nivel hasta la llave amarilla y recogerla por proximidad.
+3. Confirmar en el HUD y minimapa que el portal cambia de bloqueado a activo.
+4. Entrar al portal y comprobar la pantalla de exito con el tiempo empleado.
+5. Volver al selector y verificar que el nivel se reinicie completamente.
 
 ## Entrega
 

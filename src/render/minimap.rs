@@ -1,6 +1,9 @@
 use raylib::prelude::{Color, RaylibDraw, RaylibDrawHandle, Rectangle};
 
-use crate::{config, game::Game};
+use crate::{
+    config,
+    game::{Game, entities::EntityKind},
+};
 
 use super::palette;
 
@@ -114,6 +117,23 @@ pub fn draw(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
         layout.map_height.ceil() as i32,
         BORDER,
     );
+
+    for entity in game.entities().iter().filter(|entity| entity.active) {
+        let (entity_x, entity_y) = layout.project(entity.position.x, entity.position.y);
+        let color = match entity.kind {
+            EntityKind::Key => Color::new(255, 211, 72, 255),
+            EntityKind::Portal if game.portal_ready() => Color::new(83, 244, 214, 255),
+            EntityKind::Portal => Color::new(114, 124, 145, 255),
+            EntityKind::Guardian => Color::new(255, 77, 83, 255),
+        };
+        let radius = (layout.cell_size * 0.24).max(1.8);
+        drawing.draw_circle(
+            entity_x.round() as i32,
+            entity_y.round() as i32,
+            radius,
+            color,
+        );
+    }
 
     let (player_x, player_y) = layout.project(player.position.x, player.position.y);
     let view_length = layout.cell_size * 1.7;

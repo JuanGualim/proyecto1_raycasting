@@ -2,7 +2,7 @@ use raylib::prelude::{KeyboardKey, MouseButton, RaylibDrawHandle, RaylibHandle};
 
 use crate::{
     config,
-    game::{Game, level::LevelError},
+    game::{Game, level::LevelError, objective::GameEvent},
     screens,
 };
 
@@ -47,9 +47,6 @@ impl App {
             Screen::Playing => {
                 if input.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
                     self.transition_to(Screen::Paused, input);
-                } else if input.is_key_pressed(KeyboardKey::KEY_V) {
-                    // Transicion temporal para comprobar el flujo de pantallas.
-                    self.transition_to(Screen::Victory, input);
                 } else {
                     self.update_playing(input, delta_time);
                 }
@@ -63,6 +60,7 @@ impl App {
             }
             Screen::Victory => {
                 if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
+                    self.game.reset_level();
                     self.transition_to(Screen::LevelSelect, input);
                 }
             }
@@ -96,7 +94,7 @@ impl App {
         }
     }
 
-    fn update_playing(&mut self, input: &RaylibHandle, delta_time: f32) {
+    fn update_playing(&mut self, input: &mut RaylibHandle, delta_time: f32) {
         self.game.tick(delta_time);
         let rotation = input.get_mouse_delta().x * config::MOUSE_SENSITIVITY;
         self.game.rotate_player(rotation);
@@ -126,6 +124,10 @@ impl App {
         }
 
         self.game.move_player(forward_axis, strafe_axis, delta_time);
+
+        if self.game.update_interactions() == Some(GameEvent::Victory) {
+            self.transition_to(Screen::Victory, input);
+        }
     }
 
     fn transition_to(&mut self, next_screen: Screen, input: &mut RaylibHandle) {

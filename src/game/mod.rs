@@ -3,12 +3,14 @@ pub mod combat;
 pub mod entities;
 pub mod level;
 pub mod math;
+pub mod objective;
 pub mod player;
 pub mod raycast;
 
 use combat::{ShotOutcome, ray_circle_hit_distance};
 use entities::{Entity, EntityKind};
 use level::{Level, LevelError};
+use objective::{GameEvent, InteractionFeedback};
 use player::Player;
 use raycast::cast_ray;
 
@@ -22,6 +24,10 @@ pub struct Game {
     muzzle_flash_remaining: f32,
     shot_feedback_remaining: f32,
     last_shot: Option<ShotOutcome>,
+    has_key: bool,
+    interaction_feedback: Option<InteractionFeedback>,
+    interaction_feedback_remaining: f32,
+    level_elapsed_seconds: f32,
 }
 
 impl Game {
@@ -47,6 +53,10 @@ impl Game {
             muzzle_flash_remaining: 0.0,
             shot_feedback_remaining: 0.0,
             last_shot: None,
+            has_key: false,
+            interaction_feedback: None,
+            interaction_feedback_remaining: 0.0,
+            level_elapsed_seconds: 0.0,
         }
     }
 
@@ -85,8 +95,11 @@ impl Game {
         self.shot_cooldown_remaining = (self.shot_cooldown_remaining - delta_time).max(0.0);
         self.muzzle_flash_remaining = (self.muzzle_flash_remaining - delta_time).max(0.0);
         self.shot_feedback_remaining = (self.shot_feedback_remaining - delta_time).max(0.0);
+        self.interaction_feedback_remaining =
+            (self.interaction_feedback_remaining - delta_time).max(0.0);
+        self.level_elapsed_seconds += delta_time;
         for entity in &mut self.entities {
-            entity.hit_flash_remaining = (entity.hit_flash_remaining - delta_time).max(0.0);
+            entity.tick(delta_time);
         }
     }
 
@@ -157,6 +170,63 @@ impl Game {
             .map_or(0, |guardian| guardian.health)
     }
 
+    pub fn update_interactions(&mut self) -> Option<GameEvent> {
+        let interaction_radius_squared =
+            crate::config::ENTITY_INTERACTION_RADIUS * crate::config::ENTITY_INTERACTION_RADIUS;
+        let player_position = self.player.position;
+
+        if let Some(key) = self.entities.iter_mut().find(|entity| {
+            entity.kind == EntityKind::Key
+                && entity.active
+                && distance_squared(player_position, entity.position) <= interaction_radius_squared
+        }) {
+            key.active = false;
+            self.has_key = true;
+            self.set_interaction_feedback(InteractionFeedback::KeyCollected);
+        }
+
+        let touching_portal = self.entities.iter().any(|entity| {
+            entity.kind == EntityKind::Portal
+                && entity.active
+                && distance_squared(player_position, entity.position) <= interaction_radius_squared
+        });
+
+        if touching_portal {
+            if !self.has_key {
+                self.set_interaction_feedback(InteractionFeedback::PortalNeedsKey);
+            } else if self.guardian_health() > 0 {
+                self.set_interaction_feedback(InteractionFeedback::PortalNeedsGuardian);
+            } else {
+                return Some(GameEvent::Victory);
+            }
+        }
+
+        None
+    }
+
+    fn set_interaction_feedback(&mut self, feedback: InteractionFeedback) {
+        self.interaction_feedback = Some(feedback);
+        self.interaction_feedback_remaining = crate::config::INTERACTION_FEEDBACK_DURATION;
+    }
+
+    pub fn has_key(&self) -> bool {
+        self.has_key
+    }
+
+    pub fn portal_ready(&self) -> bool {
+        self.has_key && self.guardian_health() == 0
+    }
+
+    pub fn visible_interaction_feedback(&self) -> Option<InteractionFeedback> {
+        (self.interaction_feedback_remaining > 0.0)
+            .then_some(self.interaction_feedback)
+            .flatten()
+    }
+
+    pub fn level_elapsed_seconds(&self) -> f32 {
+        self.level_elapsed_seconds
+    }
+
     pub fn reset_level(&mut self) {
         self.player = Player::at(self.level.spawn());
         self.entities = self
@@ -170,11 +240,22 @@ impl Game {
         self.muzzle_flash_remaining = 0.0;
         self.shot_feedback_remaining = 0.0;
         self.last_shot = None;
+        self.has_key = false;
+        self.interaction_feedback = None;
+        self.interaction_feedback_remaining = 0.0;
+        self.level_elapsed_seconds = 0.0;
     }
+}
+
+fn distance_squared(left: math::Vec2, right: math::Vec2) -> f32 {
+    let x = left.x - right.x;
+    let y = left.y - right.y;
+    x * x + y * y
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
     use std::f32::consts::FRAC_PI_2;
 
     use super::{
@@ -183,6 +264,7 @@ mod tests {
         combat::ShotOutcome,
         entities::EntityKind,
         level::{Level, Material},
+        objective::{GameEvent, InteractionFeedback},
         raycast::{HitSide, cast_camera_ray},
     };
 
@@ -301,5 +383,110 @@ mod tests {
 
         assert_eq!(game.try_shoot(), ShotOutcome::Miss);
         assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
+    }
+
+    #[test]
+    fn portal_explains_missing_requirements() {
+        let mut game = Game::load_first_level().expect("embedded level should be valid");
+        let portal_position = game
+            .entities()
+            .iter()
+            .find(|entity| entity.kind == EntityKind::Portal)
+            .expect("portal")
+            .position;
+        game.player.position = portal_position;
+
+        assert_eq!(game.update_interactions(), None);
+        assert_eq!(
+            game.visible_interaction_feedback(),
+            Some(InteractionFeedback::PortalNeedsKey)
+        );
+
+        game.has_key = true;
+        assert_eq!(game.update_interactions(), None);
+        assert_eq!(
+            game.visible_interaction_feedback(),
+            Some(InteractionFeedback::PortalNeedsGuardian)
+        );
+    }
+
+    #[test]
+    fn combat_key_and_portal_complete_the_level_then_reset() {
+        let mut game = Game::load_first_level().expect("embedded level should be valid");
+
+        for _ in 0..crate::config::GUARDIAN_MAX_HEALTH {
+            assert!(matches!(game.try_shoot(), ShotOutcome::Hit { .. }));
+            game.tick(crate::config::SHOT_COOLDOWN);
+        }
+        assert_eq!(game.guardian_health(), 0);
+
+        let key_position = game
+            .entities()
+            .iter()
+            .find(|entity| entity.kind == EntityKind::Key)
+            .expect("key")
+            .position;
+        game.player.position = key_position;
+        assert_eq!(game.update_interactions(), None);
+        assert!(game.has_key());
+        assert_eq!(
+            game.visible_interaction_feedback(),
+            Some(InteractionFeedback::KeyCollected)
+        );
+
+        let portal_position = game
+            .entities()
+            .iter()
+            .find(|entity| entity.kind == EntityKind::Portal)
+            .expect("portal")
+            .position;
+        game.player.position = portal_position;
+        assert!(game.portal_ready());
+        assert_eq!(game.update_interactions(), Some(GameEvent::Victory));
+        assert!(game.level_elapsed_seconds() > 0.0);
+
+        game.reset_level();
+        assert!(!game.has_key());
+        assert!(!game.portal_ready());
+        assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
+        assert_eq!(game.level_elapsed_seconds(), 0.0);
+    }
+
+    #[test]
+    fn every_embedded_entity_is_reachable_from_spawn() {
+        let game = Game::load_first_level().expect("embedded level should be valid");
+        let level = game.level();
+        let mut visited = vec![false; level.width() * level.height()];
+        let mut pending = VecDeque::new();
+        let start = (
+            level.spawn().x.floor() as i32,
+            level.spawn().y.floor() as i32,
+        );
+        pending.push_back(start);
+        visited[start.1 as usize * level.width() + start.0 as usize] = true;
+
+        while let Some((column, row)) = pending.pop_front() {
+            for (next_column, next_row) in [
+                (column - 1, row),
+                (column + 1, row),
+                (column, row - 1),
+                (column, row + 1),
+            ] {
+                if level.is_solid(next_column, next_row) {
+                    continue;
+                }
+                let index = next_row as usize * level.width() + next_column as usize;
+                if !visited[index] {
+                    visited[index] = true;
+                    pending.push_back((next_column, next_row));
+                }
+            }
+        }
+
+        for entity in game.entities() {
+            let column = entity.position.x.floor() as usize;
+            let row = entity.position.y.floor() as usize;
+            assert!(visited[row * level.width() + column]);
+        }
     }
 }
