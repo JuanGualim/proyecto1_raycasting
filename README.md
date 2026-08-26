@@ -5,9 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 4.1 completada:** el juego cuenta con un catalogo de niveles y el selector
-carga una partida nueva a partir de la opcion elegida. Los errores de mapas
-incluidos se presentan de forma controlada sin reemplazar la partida valida.
+**Fase 4.2 completada:** el juego incluye tres niveles completos y seleccionables.
+Cada camara tiene una distribucion, dificultad y recorrido propios, conservando
+el ciclo de guardian, llave y portal.
 
 ## Requisitos
 
@@ -94,6 +94,14 @@ cargo clippy --all-targets --all-features -- -D warnings
 3. Confirmar en el HUD y minimapa que el portal cambia de bloqueado a activo.
 4. Entrar al portal y comprobar la pantalla de exito con el tiempo empleado.
 5. Volver al selector y verificar que el nivel se reinicie completamente.
+
+## Verificacion manual de multiples niveles
+
+1. Recorrer las tres opciones del selector con las flechas izquierda y derecha.
+2. Entrar a cada nivel y confirmar que el mapa, el punto inicial y las entidades
+   cambien.
+3. Completar al menos una vez el Santuario de Obsidiana y la Cripta del Musgo.
+4. Regresar al selector desde pausa y confirmar que se pueda elegir otra camara.
 
 ## Entrega
 

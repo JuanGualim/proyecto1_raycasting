@@ -269,7 +269,7 @@ mod tests {
     use std::f32::consts::FRAC_PI_2;
 
     use super::{
-        Game,
+        Game, catalog,
         collision::circle_intersects_solid,
         combat::ShotOutcome,
         entities::EntityKind,
@@ -323,32 +323,61 @@ mod tests {
     }
 
     #[test]
-    fn every_screen_column_hits_a_finite_wall_from_spawn() {
-        let game = Game::load_first_level().expect("embedded level should be valid");
+    fn every_screen_column_hits_a_finite_wall_in_every_level() {
+        for level_index in 0..catalog::level_count() {
+            let game = Game::load_level(level_index).expect("embedded level should be valid");
 
-        for column in 0..crate::config::WINDOW_WIDTH {
-            let camera_x = 2.0 * column as f32 / crate::config::WINDOW_WIDTH as f32 - 1.0;
-            let hit = cast_camera_ray(game.level(), game.player(), camera_x)
-                .expect("closed level should stop every ray");
+            for column in 0..crate::config::WINDOW_WIDTH {
+                let camera_x = 2.0 * column as f32 / crate::config::WINDOW_WIDTH as f32 - 1.0;
+                let hit = cast_camera_ray(game.level(), game.player(), camera_x)
+                    .expect("closed level should stop every ray");
 
-            assert!(hit.distance.is_finite());
-            assert!(hit.distance > 0.0);
+                assert!(hit.distance.is_finite());
+                assert!(hit.distance > 0.0);
+            }
         }
     }
 
     #[test]
-    fn embedded_level_instantiates_key_portal_and_guardian() {
-        let game = Game::load_first_level().expect("embedded level should be valid");
+    fn every_level_has_exactly_one_complete_set_of_objectives() {
+        for level_index in 0..catalog::level_count() {
+            let game = Game::load_level(level_index).expect("embedded level should be valid");
 
-        assert_eq!(game.entities().len(), 3);
-        assert!(
-            [EntityKind::Key, EntityKind::Portal, EntityKind::Guardian]
-                .into_iter()
-                .all(|kind| game
-                    .entities()
-                    .iter()
-                    .any(|entity| entity.kind == kind && entity.active))
-        );
+            assert_eq!(game.entities().len(), 3);
+            for kind in [EntityKind::Key, EntityKind::Portal, EntityKind::Guardian] {
+                assert_eq!(
+                    game.entities()
+                        .iter()
+                        .filter(|entity| entity.kind == kind && entity.active)
+                        .count(),
+                    1
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_level_uses_all_wall_materials() {
+        for level_index in 0..catalog::level_count() {
+            let game = Game::load_level(level_index).expect("embedded level should be valid");
+            let level = game.level();
+
+            for material in [
+                Material::Stone,
+                Material::Obsidian,
+                Material::Brick,
+                Material::Glyph,
+                Material::Moss,
+            ] {
+                assert!(
+                    (0..level.height()).any(|row| (0..level.width()).any(|column| {
+                        level.wall_material_at(column as i32, row as i32) == Some(material)
+                    })),
+                    "material {material:?} is missing from level {}",
+                    level_index + 1
+                );
+            }
+        }
     }
 
     #[test]
@@ -464,39 +493,46 @@ mod tests {
 
     #[test]
     fn every_embedded_entity_is_reachable_from_spawn() {
-        let game = Game::load_first_level().expect("embedded level should be valid");
-        let level = game.level();
-        let mut visited = vec![false; level.width() * level.height()];
-        let mut pending = VecDeque::new();
-        let start = (
-            level.spawn().x.floor() as i32,
-            level.spawn().y.floor() as i32,
-        );
-        pending.push_back(start);
-        visited[start.1 as usize * level.width() + start.0 as usize] = true;
+        for level_index in 0..catalog::level_count() {
+            let game = Game::load_level(level_index).expect("embedded level should be valid");
+            let level = game.level();
+            let mut visited = vec![false; level.width() * level.height()];
+            let mut pending = VecDeque::new();
+            let start = (
+                level.spawn().x.floor() as i32,
+                level.spawn().y.floor() as i32,
+            );
+            pending.push_back(start);
+            visited[start.1 as usize * level.width() + start.0 as usize] = true;
 
-        while let Some((column, row)) = pending.pop_front() {
-            for (next_column, next_row) in [
-                (column - 1, row),
-                (column + 1, row),
-                (column, row - 1),
-                (column, row + 1),
-            ] {
-                if level.is_solid(next_column, next_row) {
-                    continue;
-                }
-                let index = next_row as usize * level.width() + next_column as usize;
-                if !visited[index] {
-                    visited[index] = true;
-                    pending.push_back((next_column, next_row));
+            while let Some((column, row)) = pending.pop_front() {
+                for (next_column, next_row) in [
+                    (column - 1, row),
+                    (column + 1, row),
+                    (column, row - 1),
+                    (column, row + 1),
+                ] {
+                    if level.is_solid(next_column, next_row) {
+                        continue;
+                    }
+                    let index = next_row as usize * level.width() + next_column as usize;
+                    if !visited[index] {
+                        visited[index] = true;
+                        pending.push_back((next_column, next_row));
+                    }
                 }
             }
-        }
 
-        for entity in game.entities() {
-            let column = entity.position.x.floor() as usize;
-            let row = entity.position.y.floor() as usize;
-            assert!(visited[row * level.width() + column]);
+            for entity in game.entities() {
+                let column = entity.position.x.floor() as usize;
+                let row = entity.position.y.floor() as usize;
+                assert!(
+                    visited[row * level.width() + column],
+                    "entity {:?} is unreachable in level {}",
+                    entity.kind,
+                    level_index + 1
+                );
+            }
         }
     }
 }

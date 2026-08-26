@@ -3,6 +3,8 @@ use std::{error::Error, fmt};
 use super::level::{Level, LevelError};
 
 const ECLIPSE_CHAMBER_ONE: &str = include_str!("../../levels/eclipse_1.txt");
+const ECLIPSE_CHAMBER_TWO: &str = include_str!("../../levels/eclipse_2.txt");
+const ECLIPSE_CHAMBER_THREE: &str = include_str!("../../levels/eclipse_3.txt");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LevelDefinition {
@@ -12,12 +14,26 @@ pub struct LevelDefinition {
     source: &'static str,
 }
 
-pub const LEVELS: &[LevelDefinition] = &[LevelDefinition {
-    name: "Atrio del Eclipse",
-    description: "Recupera la llave solar y activa el portal del templo.",
-    difficulty: "INICIACION",
-    source: ECLIPSE_CHAMBER_ONE,
-}];
+pub const LEVELS: &[LevelDefinition] = &[
+    LevelDefinition {
+        name: "Atrio del Eclipse",
+        description: "Recupera la llave solar y activa el portal del templo.",
+        difficulty: "INICIACION",
+        source: ECLIPSE_CHAMBER_ONE,
+    },
+    LevelDefinition {
+        name: "Santuario de Obsidiana",
+        description: "Abrete paso por anillos de piedra hasta el guardian.",
+        difficulty: "RITUAL",
+        source: ECLIPSE_CHAMBER_TWO,
+    },
+    LevelDefinition {
+        name: "Cripta del Musgo",
+        description: "Explora corredores divididos y encuentra la salida.",
+        difficulty: "ECLIPSE",
+        source: ECLIPSE_CHAMBER_THREE,
+    },
+];
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum LevelLoadError {
@@ -76,7 +92,7 @@ mod tests {
 
     #[test]
     fn catalog_metadata_and_level_source_stay_in_sync() {
-        assert!(!LEVELS.is_empty());
+        assert!(LEVELS.len() >= 3);
         assert_eq!(level_count(), LEVELS.len());
 
         for index in 0..level_count() {
