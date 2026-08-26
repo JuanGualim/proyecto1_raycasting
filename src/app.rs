@@ -2,7 +2,7 @@ use raylib::prelude::{KeyboardKey, MouseButton, RaylibDrawHandle, RaylibHandle};
 
 use crate::{
     config,
-    game::{Game, level::LevelError, objective::GameEvent},
+    game::{Game, catalog, catalog::LevelLoadError, objective::GameEvent},
     screens,
 };
 
@@ -21,16 +21,18 @@ pub struct App {
     elapsed_seconds: f32,
     should_quit: bool,
     game: Game,
+    level_load_error: Option<String>,
 }
 
 impl App {
-    pub fn new() -> Result<Self, LevelError> {
+    pub fn new() -> Result<Self, LevelLoadError> {
         Ok(Self {
             screen: Screen::Welcome,
             selected_level: 0,
             elapsed_seconds: 0.0,
             should_quit: false,
             game: Game::load_first_level()?,
+            level_load_error: None,
         })
     }
 
@@ -78,20 +80,31 @@ impl App {
             self.selected_level = self
                 .selected_level
                 .checked_sub(1)
-                .unwrap_or(config::LEVEL_COUNT - 1);
+                .unwrap_or(catalog::level_count() - 1);
+            self.level_load_error = None;
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_RIGHT) {
-            self.selected_level = if self.selected_level + 1 >= config::LEVEL_COUNT {
+            self.selected_level = if self.selected_level + 1 >= catalog::level_count() {
                 0
             } else {
                 self.selected_level + 1
             };
+            self.level_load_error = None;
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
-            self.transition_to(Screen::Playing, input);
+            match self.load_selected_level() {
+                Ok(()) => self.transition_to(Screen::Playing, input),
+                Err(error) => self.level_load_error = Some(error.to_string()),
+            }
         }
+    }
+
+    fn load_selected_level(&mut self) -> Result<(), LevelLoadError> {
+        self.game = Game::load_level(self.selected_level)?;
+        self.level_load_error = None;
+        Ok(())
     }
 
     fn update_playing(&mut self, input: &mut RaylibHandle, delta_time: f32) {
@@ -150,6 +163,7 @@ impl App {
             self.selected_level,
             self.elapsed_seconds,
             &self.game,
+            self.level_load_error.as_deref(),
         );
     }
 
@@ -161,6 +175,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::{App, Screen};
+    use crate::game::catalog;
 
     #[test]
     fn application_starts_on_welcome_screen() {
@@ -169,5 +184,28 @@ mod tests {
         assert_eq!(app.screen, Screen::Welcome);
         assert_eq!(app.selected_level, 0);
         assert!(!app.should_quit());
+    }
+
+    #[test]
+    fn selected_level_creates_a_fresh_game() {
+        let mut app = App::new().expect("embedded level should be valid");
+        app.game.tick(2.0);
+
+        app.load_selected_level()
+            .expect("selected level should load");
+
+        assert_eq!(app.game.level_index(), app.selected_level);
+        assert_eq!(app.game.level_elapsed_seconds(), 0.0);
+        assert!(app.level_load_error.is_none());
+    }
+
+    #[test]
+    fn invalid_selection_does_not_replace_the_current_game() {
+        let mut app = App::new().expect("embedded level should be valid");
+        let original_level = app.game.level_index();
+        app.selected_level = catalog::level_count();
+
+        assert!(app.load_selected_level().is_err());
+        assert_eq!(app.game.level_index(), original_level);
     }
 }

@@ -18,15 +18,16 @@ pub fn draw(
     selected_level: usize,
     elapsed_seconds: f32,
     game: &Game,
+    level_load_error: Option<&str>,
 ) {
     drawing.clear_background(NIGHT);
 
     match screen {
         Screen::Welcome => draw_welcome(drawing, elapsed_seconds),
-        Screen::LevelSelect => draw_level_select(drawing, selected_level),
-        Screen::Playing => draw_game(drawing, selected_level, game),
+        Screen::LevelSelect => draw_level_select(drawing, selected_level, level_load_error),
+        Screen::Playing => draw_game(drawing, game),
         Screen::Paused => {
-            draw_game(drawing, selected_level, game);
+            draw_game(drawing, game);
             draw_pause(drawing);
         }
         Screen::Victory => draw_victory(drawing, game),
@@ -45,7 +46,11 @@ fn draw_welcome(drawing: &mut RaylibDrawHandle<'_>, elapsed_seconds: f32) {
     draw_phase_badge(drawing);
 }
 
-fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) {
+fn draw_level_select(
+    drawing: &mut RaylibDrawHandle<'_>,
+    selected_level: usize,
+    level_load_error: Option<&str>,
+) {
     draw_centered(drawing, "SELECCION DE NIVEL", 100, 34, GOLD);
     draw_centered(
         drawing,
@@ -56,23 +61,34 @@ fn draw_level_select(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize) 
     );
     draw_centered(
         drawing,
-        "Un nivel disponible  |  ENTER para entrar",
+        &format!(
+            "{} {} disponibles  |  ENTER para entrar",
+            crate::game::catalog::level_count(),
+            if crate::game::catalog::level_count() == 1 {
+                "nivel"
+            } else {
+                "niveles"
+            }
+        ),
         325,
         20,
         MUTED,
     );
     draw_centered(drawing, "Q  -  salir", 380, 18, MUTED);
+    if let Some(error) = level_load_error {
+        draw_centered(drawing, error, 425, 16, Color::new(255, 120, 105, 255));
+    }
     draw_phase_badge(drawing);
 }
 
-fn draw_game(drawing: &mut RaylibDrawHandle<'_>, selected_level: usize, game: &Game) {
+fn draw_game(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
     let depth_buffer = render::world::draw(drawing, game);
     render::sprites::draw(drawing, game, &depth_buffer);
     render::weapon::draw(drawing, game);
 
     drawing.draw_rectangle(12, 12, 445, 101, Color::new(8, 7, 18, 220));
     drawing.draw_text(
-        &format!("CAMARA {}  |  RAY CASTING DDA", selected_level + 1),
+        &format!("CAMARA {}  |  RAY CASTING DDA", game.level_index() + 1),
         24,
         23,
         18,

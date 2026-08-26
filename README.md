@@ -5,10 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 3 completada:** el nivel ya tiene un ciclo jugable completo. El jugador
-debe eliminar al guardian, recoger la llave solar y entrar al portal activado.
-Guardian, llave y portal usan animacion por cuadros; al cumplir los objetivos se
-muestra una pantalla real de exito.
+**Fase 4.1 completada:** el juego cuenta con un catalogo de niveles y el selector
+carga una partida nueva a partir de la opcion elegida. Los errores de mapas
+incluidos se presentan de forma controlada sin reemplazar la partida valida.
 
 ## Requisitos
 
@@ -38,7 +37,7 @@ cargo run --release
 | --- | --- | --- |
 | Bienvenida | `Enter` | Abrir selector de nivel |
 | Bienvenida/selector | `Q` | Salir |
-| Selector | Flechas izquierda/derecha | Elegir nivel (uno disponible) |
+| Selector | Flechas izquierda/derecha | Recorrer los niveles disponibles |
 | Selector | `Enter` | Iniciar nivel |
 | Juego | `W`, `A`, `S`, `D` | Moverse y desplazarse lateralmente |
 | Juego | Movimiento horizontal del mouse | Girar la camara |
@@ -66,6 +65,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/config.rs`: configuracion global de ventana y simulacion.
 - `src/app.rs`: estado y transiciones de la aplicacion.
 - `src/game/collision.rs`: colision circular, subpasos y deslizamiento por ejes.
+- `src/game/catalog.rs`: catalogo, metadatos y carga segura de niveles incluidos.
 - `src/game/combat.rs`: interseccion hitscan y resultados de disparo.
 - `src/game/entities.rs`: tipos y estado base de llave, portal y guardian.
 - `src/game/level.rs`: parser y validacion del mapa.

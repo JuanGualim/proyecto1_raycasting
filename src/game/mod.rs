@@ -1,3 +1,4 @@
+pub mod catalog;
 pub mod collision;
 pub mod combat;
 pub mod entities;
@@ -7,16 +8,16 @@ pub mod objective;
 pub mod player;
 pub mod raycast;
 
+use catalog::LevelLoadError;
 use combat::{ShotOutcome, ray_circle_hit_distance};
 use entities::{Entity, EntityKind};
-use level::{Level, LevelError};
+use level::Level;
 use objective::{GameEvent, InteractionFeedback};
 use player::Player;
 use raycast::cast_ray;
 
-const ECLIPSE_CHAMBER_ONE: &str = include_str!("../../levels/eclipse_1.txt");
-
 pub struct Game {
+    level_index: usize,
     level: Level,
     player: Player,
     entities: Vec<Entity>,
@@ -31,12 +32,16 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn load_first_level() -> Result<Self, LevelError> {
-        let level = Level::parse(ECLIPSE_CHAMBER_ONE)?;
-        Ok(Self::from_level(level))
+    pub fn load_first_level() -> Result<Self, LevelLoadError> {
+        Self::load_level(0)
     }
 
-    fn from_level(level: Level) -> Self {
+    pub fn load_level(level_index: usize) -> Result<Self, LevelLoadError> {
+        let level = catalog::load(level_index)?;
+        Ok(Self::from_level_at(level_index, level))
+    }
+
+    fn from_level_at(level_index: usize, level: Level) -> Self {
         let player = Player::at(level.spawn());
         let entities = level
             .entity_spawns()
@@ -46,6 +51,7 @@ impl Game {
             .collect();
 
         Self {
+            level_index,
             level,
             player,
             entities,
@@ -62,6 +68,10 @@ impl Game {
 
     pub fn level(&self) -> &Level {
         &self.level
+    }
+
+    pub fn level_index(&self) -> usize {
+        self.level_index
     }
 
     pub fn player(&self) -> &Player {
@@ -370,7 +380,7 @@ mod tests {
     #[test]
     fn wall_blocks_a_guardian_aligned_with_the_crosshair() {
         let level = Level::parse("1111111\n1S.1G.1\n1.....1\n1111111").expect("valid room");
-        let mut game = Game::from_level(level);
+        let mut game = Game::from_level_at(0, level);
 
         assert_eq!(game.try_shoot(), ShotOutcome::Blocked);
         assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);
@@ -379,7 +389,7 @@ mod tests {
     #[test]
     fn shot_misses_when_no_guardian_intersects_the_center_ray() {
         let level = Level::parse("11111\n1S..1\n1.G.1\n1...1\n11111").expect("valid room");
-        let mut game = Game::from_level(level);
+        let mut game = Game::from_level_at(0, level);
 
         assert_eq!(game.try_shoot(), ShotOutcome::Miss);
         assert_eq!(game.guardian_health(), crate::config::GUARDIAN_MAX_HEALTH);

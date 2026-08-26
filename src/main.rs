@@ -18,7 +18,7 @@ fn main() {
     let mut app = match App::new() {
         Ok(app) => app,
         Err(error) => {
-            eprintln!("No se pudo cargar el nivel incluido: {error}");
+            eprintln!("No se pudo cargar el catalogo de niveles: {error}");
             return;
         }
     };
