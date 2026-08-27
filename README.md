@@ -5,9 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 4.2 completada:** el juego incluye tres niveles completos y seleccionables.
-Cada camara tiene una distribucion, dificultad y recorrido propios, conservando
-el ciclo de guardian, llave y portal.
+**Fase 4 completada:** el juego incluye una pantalla de bienvenida y un selector
+visual para tres niveles completos. Cada opcion muestra nombre, dificultad,
+descripcion, objetivos y una vista previa del mapa antes de comenzar.
 
 ## Requisitos
 
@@ -37,8 +37,9 @@ cargo run --release
 | --- | --- | --- |
 | Bienvenida | `Enter` | Abrir selector de nivel |
 | Bienvenida/selector | `Q` | Salir |
-| Selector | Flechas izquierda/derecha | Recorrer los niveles disponibles |
+| Selector | Flechas izquierda/derecha o `A`/`D` | Recorrer los niveles disponibles |
 | Selector | `Enter` | Iniciar nivel |
+| Selector | `Esc` | Volver a la bienvenida |
 | Juego | `W`, `A`, `S`, `D` | Moverse y desplazarse lateralmente |
 | Juego | Movimiento horizontal del mouse | Girar la camara |
 | Juego | Clic izquierdo | Disparar |
@@ -76,7 +77,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 - `src/render/palette.rs`: colores compartidos por paredes, HUD y minimapa.
 - `src/render/sprites.rs`: proyeccion billboard y oclusion de entidades.
 - `src/render/world.rs`: proyeccion y coloreado de paredes, techo y piso.
-- `src/screens/`: presentacion de las pantallas y HUD provisional.
+- `src/screens/`: bienvenida, selector visual, HUD, pausa y pantalla de exito.
 - `levels/`: mapas de texto incluidos en el ejecutable.
 
 ## Verificacion manual de navegacion
@@ -103,11 +104,20 @@ cargo clippy --all-targets --all-features -- -D warnings
 3. Completar al menos una vez el Santuario de Obsidiana y la Cripta del Musgo.
 4. Regresar al selector desde pausa y confirmar que se pueda elegir otra camara.
 
+## Verificacion manual del selector
+
+1. Abrir el selector desde la bienvenida y comprobar las tres fichas de nivel.
+2. Verificar que nombre, dificultad, descripcion y plano cambien juntos.
+3. Confirmar que las flechas y `A`/`D` recorran el catalogo de forma circular.
+4. Presionar `Esc` para volver a la bienvenida y `Enter` para regresar.
+
+La fase 4 cubre la pantalla de bienvenida y la seleccion entre multiples niveles
+solicitadas por la rubrica.
+
 ## Entrega
 
 La version final incluira instrucciones completas, creditos de recursos, enlace
 al video demostrativo y una lista de los objetivos de la rubrica implementados.
-
 
 
 

@@ -45,7 +45,13 @@ impl App {
                     self.transition_to(Screen::LevelSelect, input);
                 }
             }
-            Screen::LevelSelect => self.update_level_select(input),
+            Screen::LevelSelect => {
+                if input.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
+                    self.transition_to(Screen::Welcome, input);
+                } else {
+                    self.update_level_select(input);
+                }
+            }
             Screen::Playing => {
                 if input.is_key_pressed(KeyboardKey::KEY_ESCAPE) {
                     self.transition_to(Screen::Paused, input);
@@ -76,20 +82,16 @@ impl App {
     }
 
     fn update_level_select(&mut self, input: &mut RaylibHandle) {
-        if input.is_key_pressed(KeyboardKey::KEY_LEFT) {
-            self.selected_level = self
-                .selected_level
-                .checked_sub(1)
-                .unwrap_or(catalog::level_count() - 1);
-            self.level_load_error = None;
-        }
+        let move_left =
+            input.is_key_pressed(KeyboardKey::KEY_LEFT) || input.is_key_pressed(KeyboardKey::KEY_A);
+        let move_right = input.is_key_pressed(KeyboardKey::KEY_RIGHT)
+            || input.is_key_pressed(KeyboardKey::KEY_D);
 
-        if input.is_key_pressed(KeyboardKey::KEY_RIGHT) {
-            self.selected_level = if self.selected_level + 1 >= catalog::level_count() {
-                0
-            } else {
-                self.selected_level + 1
-            };
+        if move_left {
+            self.selected_level = cycle_level_index(self.selected_level, -1);
+            self.level_load_error = None;
+        } else if move_right {
+            self.selected_level = cycle_level_index(self.selected_level, 1);
             self.level_load_error = None;
         }
 
@@ -172,9 +174,21 @@ impl App {
     }
 }
 
+fn cycle_level_index(current: usize, direction: i32) -> usize {
+    let count = catalog::level_count();
+    debug_assert!(count > 0);
+    let current = current % count;
+
+    if direction < 0 {
+        current.checked_sub(1).unwrap_or(count - 1)
+    } else {
+        (current + 1) % count
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{App, Screen};
+    use super::{App, Screen, cycle_level_index};
     use crate::game::catalog;
 
     #[test]
@@ -207,5 +221,14 @@ mod tests {
 
         assert!(app.load_selected_level().is_err());
         assert_eq!(app.game.level_index(), original_level);
+    }
+
+    #[test]
+    fn level_selection_wraps_in_both_directions() {
+        let last = catalog::level_count() - 1;
+
+        assert_eq!(cycle_level_index(0, -1), last);
+        assert_eq!(cycle_level_index(last, 1), 0);
+        assert_eq!(cycle_level_index(0, 1), 1);
     }
 }

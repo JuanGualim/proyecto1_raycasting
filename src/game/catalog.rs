@@ -14,6 +14,12 @@ pub struct LevelDefinition {
     source: &'static str,
 }
 
+impl LevelDefinition {
+    pub(crate) const fn layout(&self) -> &'static str {
+        self.source
+    }
+}
+
 pub const LEVELS: &[LevelDefinition] = &[
     LevelDefinition {
         name: "Atrio del Eclipse",
@@ -100,7 +106,16 @@ mod tests {
             assert!(!entry.name.is_empty());
             assert!(!entry.description.is_empty());
             assert!(!entry.difficulty.is_empty());
+            assert!(!entry.layout().is_empty());
             load(index).expect("every embedded level should be valid");
+        }
+
+        for (index, entry) in LEVELS.iter().enumerate() {
+            assert!(
+                LEVELS[index + 1..]
+                    .iter()
+                    .all(|other| other.name != entry.name)
+            );
         }
     }
 

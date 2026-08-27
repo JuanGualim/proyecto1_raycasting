@@ -15,7 +15,7 @@ pub enum Material {
 }
 
 impl Material {
-    fn from_symbol(symbol: char) -> Option<Self> {
+    pub(crate) fn from_symbol(symbol: char) -> Option<Self> {
         match symbol {
             '1' => Some(Self::Stone),
             '2' => Some(Self::Obsidian),
