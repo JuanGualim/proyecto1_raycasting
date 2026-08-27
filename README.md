@@ -5,9 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 5.1 completada:** el juego reproduce una composicion ambiental original
-generada por codigo. La musica se mantiene en bucle durante todas las pantallas y
-se puede activar o silenciar sin interrumpir la partida.
+**Fase 5 completada:** el juego cuenta con musica ambiental y ocho efectos de
+sonido originales generados por codigo. Combate, objetivos, victoria y menus
+ofrecen retroalimentacion auditiva sin repetir eventos cada cuadro.
 
 ## Requisitos
 
@@ -118,13 +118,28 @@ solicitadas por la rubrica.
 
 ## Audio
 
-La musica de fondo es una composicion original sintetizada en tiempo de ejecucion
-con ondas, arpegios y campanas. No utiliza canciones ni recursos externos, por lo
-que no requiere atribuciones adicionales.
+La musica de fondo y los efectos son composiciones originales sintetizadas en
+tiempo de ejecucion. No utilizan canciones ni recursos externos, por lo que no
+requieren atribuciones adicionales.
+
+Los efectos distinguen movimiento y confirmacion de menu, disparo, impacto,
+guardian derrotado, llave recogida, portal activado y victoria. Una cola de
+eventos garantiza que cada efecto corresponda a una accion concreta.
+
+## Verificacion manual del audio
+
+1. Usar `F1` para silenciar y restaurar todo el audio.
+2. Cambiar y confirmar niveles para escuchar los dos efectos del menu.
+3. Disparar al aire y al guardian para distinguir disparo, impacto y derrota.
+4. Recoger la llave y confirmar el sonido de activacion cuando el portal quede
+   listo.
+5. Cruzar el portal y escuchar el efecto de victoria.
+
+La fase 5 cubre los objetivos de musica de fondo y efectos de sonido de la
+rubrica.
 
 ## Entrega
 
 La version final incluira instrucciones completas, creditos de recursos, enlace
 al video demostrativo y una lista de los objetivos de la rubrica implementados.
-
 

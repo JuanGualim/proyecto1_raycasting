@@ -1,8 +1,9 @@
 use raylib::prelude::{KeyboardKey, MouseButton, RaylibDrawHandle, RaylibHandle};
 
 use crate::{
+    audio::AudioCue,
     config,
-    game::{Game, catalog, catalog::LevelLoadError, objective::GameEvent},
+    game::{Game, catalog, catalog::LevelLoadError, combat::ShotOutcome, objective::GameEvent},
     screens,
 };
 
@@ -23,6 +24,7 @@ pub struct App {
     game: Game,
     level_load_error: Option<String>,
     audio_enabled: bool,
+    audio_cues: Vec<AudioCue>,
 }
 
 impl App {
@@ -35,6 +37,7 @@ impl App {
             game: Game::load_first_level()?,
             level_load_error: None,
             audio_enabled: true,
+            audio_cues: Vec::new(),
         })
     }
 
@@ -43,6 +46,9 @@ impl App {
 
         if input.is_key_pressed(KeyboardKey::KEY_F1) {
             self.audio_enabled = !self.audio_enabled;
+            if self.audio_enabled {
+                self.audio_cues.push(AudioCue::MenuConfirm);
+            }
         }
 
         match self.screen {
@@ -96,9 +102,11 @@ impl App {
         if move_left {
             self.selected_level = cycle_level_index(self.selected_level, -1);
             self.level_load_error = None;
+            self.audio_cues.push(AudioCue::MenuMove);
         } else if move_right {
             self.selected_level = cycle_level_index(self.selected_level, 1);
             self.level_load_error = None;
+            self.audio_cues.push(AudioCue::MenuMove);
         }
 
         if input.is_key_pressed(KeyboardKey::KEY_ENTER) {
@@ -122,10 +130,14 @@ impl App {
 
         if input.is_key_pressed(KeyboardKey::KEY_R) {
             self.game.reset_level();
+            self.audio_cues.push(AudioCue::MenuConfirm);
         }
 
         if input.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
-            self.game.try_shoot();
+            let portal_was_ready = self.game.portal_ready();
+            let outcome = self.game.try_shoot();
+            self.record_shot_audio(outcome);
+            self.record_portal_activation(portal_was_ready);
         }
 
         let mut forward_axis = 0.0;
@@ -146,12 +158,57 @@ impl App {
 
         self.game.move_player(forward_axis, strafe_axis, delta_time);
 
-        if self.game.update_interactions() == Some(GameEvent::Victory) {
+        let had_key = self.game.has_key();
+        let portal_was_ready = self.game.portal_ready();
+        let event = self.game.update_interactions();
+        if !had_key && self.game.has_key() {
+            self.audio_cues.push(AudioCue::KeyCollected);
+        }
+        self.record_portal_activation(portal_was_ready);
+
+        if event == Some(GameEvent::Victory) {
             self.transition_to(Screen::Victory, input);
         }
     }
 
+    fn record_shot_audio(&mut self, outcome: ShotOutcome) {
+        if outcome == ShotOutcome::Cooldown {
+            return;
+        }
+
+        self.audio_cues.push(AudioCue::Shot);
+        match outcome {
+            ShotOutcome::Hit { destroyed: false } => {
+                self.audio_cues.push(AudioCue::GuardianHit);
+            }
+            ShotOutcome::Hit { destroyed: true } => {
+                self.audio_cues.push(AudioCue::GuardianDefeated);
+            }
+            ShotOutcome::Miss | ShotOutcome::Blocked | ShotOutcome::Cooldown => {}
+        }
+    }
+
+    fn record_portal_activation(&mut self, portal_was_ready: bool) {
+        if !portal_was_ready && self.game.portal_ready() {
+            self.audio_cues.push(AudioCue::PortalActivated);
+        }
+    }
+
     fn transition_to(&mut self, next_screen: Screen, input: &mut RaylibHandle) {
+        if self.screen == next_screen {
+            return;
+        }
+
+        let cue = match (self.screen, next_screen) {
+            (_, Screen::Victory) => AudioCue::Victory,
+            (Screen::Welcome, Screen::LevelSelect)
+            | (Screen::LevelSelect, Screen::Playing)
+            | (Screen::Paused, Screen::Playing)
+            | (Screen::Victory, Screen::LevelSelect) => AudioCue::MenuConfirm,
+            _ => AudioCue::MenuMove,
+        };
+        self.audio_cues.push(cue);
+
         let was_captured = self.screen == Screen::Playing;
         let should_capture = next_screen == Screen::Playing;
 
@@ -183,6 +240,10 @@ impl App {
     pub fn audio_enabled(&self) -> bool {
         self.audio_enabled
     }
+
+    pub fn take_audio_cues(&mut self) -> Vec<AudioCue> {
+        std::mem::take(&mut self.audio_cues)
+    }
 }
 
 fn cycle_level_index(current: usize, direction: i32) -> usize {
@@ -200,7 +261,10 @@ fn cycle_level_index(current: usize, direction: i32) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{App, Screen, cycle_level_index};
-    use crate::game::catalog;
+    use crate::{
+        audio::AudioCue,
+        game::{catalog, combat::ShotOutcome},
+    };
 
     #[test]
     fn application_starts_on_welcome_screen() {
@@ -242,5 +306,28 @@ mod tests {
         assert_eq!(cycle_level_index(0, -1), last);
         assert_eq!(cycle_level_index(last, 1), 0);
         assert_eq!(cycle_level_index(0, 1), 1);
+    }
+
+    #[test]
+    fn combat_audio_ignores_cooldown_and_distinguishes_hits() {
+        let mut app = App::new().expect("embedded level should be valid");
+
+        app.record_shot_audio(ShotOutcome::Cooldown);
+        assert!(app.take_audio_cues().is_empty());
+
+        app.record_shot_audio(ShotOutcome::Miss);
+        assert_eq!(app.take_audio_cues(), [AudioCue::Shot]);
+
+        app.record_shot_audio(ShotOutcome::Hit { destroyed: false });
+        assert_eq!(
+            app.take_audio_cues(),
+            [AudioCue::Shot, AudioCue::GuardianHit]
+        );
+
+        app.record_shot_audio(ShotOutcome::Hit { destroyed: true });
+        assert_eq!(
+            app.take_audio_cues(),
+            [AudioCue::Shot, AudioCue::GuardianDefeated]
+        );
     }
 }

@@ -42,8 +42,13 @@ fn main() {
     while !window.window_should_close() && !app.should_quit() {
         let delta_time = window.get_frame_time().min(config::MAX_DELTA_TIME);
         app.update(&mut window, delta_time);
+        let audio_enabled = app.audio_enabled();
+        let audio_cues = app.take_audio_cues();
         if let Some(audio) = &mut audio_system {
-            audio.update(app.audio_enabled());
+            audio.update(audio_enabled);
+            for cue in audio_cues {
+                audio.play(cue);
+            }
         }
 
         let mut drawing = window.begin_drawing(&thread);

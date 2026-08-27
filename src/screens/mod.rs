@@ -461,7 +461,7 @@ fn draw_victory(drawing: &mut RaylibDrawHandle<'_>, game: &Game) {
 }
 
 fn draw_phase_badge(drawing: &mut RaylibDrawHandle<'_>) {
-    let label = "TRES NIVELES JUGABLES - FASE 4";
+    let label = "MUSICA Y EFECTOS ORIGINALES - FASE 5";
     let font_size = 16;
     let width = drawing.measure_text(label, font_size);
     drawing.draw_text(
