@@ -208,10 +208,50 @@ fn compose_effect_waveforms() -> EffectWaveforms {
             let envelope = (progress * std::f32::consts::PI).sin();
             ((TAU * 523.25 * time).sin() + 0.55 * (TAU * 783.99 * time).sin()) * envelope * 0.4
         }),
-        shot: synthesize_effect(0.18, |time, progress, frame| {
-            let envelope = (1.0 - progress).powi(3);
-            let sweep = (TAU * (220.0 - progress * 150.0) * time).sin();
-            (sweep * 0.65 + deterministic_noise(frame) * 0.55) * envelope
+        shot: synthesize_effect(0.32, |time, progress, frame| {
+            let white_noise = deterministic_noise(frame);
+            let low_noise = (white_noise
+                + deterministic_noise(frame.wrapping_sub(1))
+                + deterministic_noise(frame.wrapping_sub(2))
+                + deterministic_noise(frame.wrapping_sub(3)))
+                * 0.25;
+
+            // Una detonacion creible necesita un ataque casi instantaneo, un
+            // cuerpo grave y reflexiones mucho mas suaves que el golpe inicial.
+            let crack_envelope = (-210.0 * time).exp();
+            let crack = (white_noise * 0.9 + (TAU * 2_650.0 * time).sin() * 0.24) * crack_envelope;
+
+            let body_envelope = (-18.0 * time).exp();
+            let body_frequency = 118.0 - progress * 48.0;
+            let body =
+                ((TAU * body_frequency * time).sin() * 0.82 + low_noise * 0.42) * body_envelope;
+
+            let mechanism_time = (time - 0.014).max(0.0);
+            let mechanism = if time >= 0.014 {
+                (TAU * 760.0 * mechanism_time).sin() * (-95.0 * mechanism_time).exp() * 0.16
+            } else {
+                0.0
+            };
+
+            let first_echo_time = (time - 0.072).max(0.0);
+            let first_echo = if time >= 0.072 {
+                ((TAU * 91.0 * first_echo_time).sin() * 0.7 + low_noise * 0.3)
+                    * (-24.0 * first_echo_time).exp()
+                    * 0.28
+            } else {
+                0.0
+            };
+
+            let second_echo_time = (time - 0.158).max(0.0);
+            let second_echo = if time >= 0.158 {
+                ((TAU * 74.0 * second_echo_time).sin() * 0.75 + low_noise * 0.25)
+                    * (-27.0 * second_echo_time).exp()
+                    * 0.14
+            } else {
+                0.0
+            };
+
+            ((crack + body + mechanism + first_echo + second_echo) * 1.08).tanh()
         }),
         guardian_hit: synthesize_effect(0.14, |time, progress, frame| {
             let envelope = (1.0 - progress).powi(2);
@@ -355,5 +395,24 @@ mod tests {
                 })
             );
         }
+    }
+
+    #[test]
+    fn gunshot_has_a_strong_transient_and_a_quieter_tail() {
+        let shot = compose_effect_waveforms().shot;
+        let samples = shot[44..]
+            .chunks_exact(2)
+            .map(|bytes| i16::from_le_bytes([bytes[0], bytes[1]]) as f32)
+            .collect::<Vec<_>>();
+        let attack_frames = (SAMPLE_RATE as f32 * 0.025) as usize;
+        let tail_start = (SAMPLE_RATE as f32 * 0.22) as usize;
+        let root_mean_square = |slice: &[f32]| {
+            (slice.iter().map(|sample| sample * sample).sum::<f32>() / slice.len() as f32).sqrt()
+        };
+        let attack = root_mean_square(&samples[..attack_frames]);
+        let tail = root_mean_square(&samples[tail_start..]);
+
+        assert!(attack > 12_000.0);
+        assert!(attack > tail * 3.0);
     }
 }
