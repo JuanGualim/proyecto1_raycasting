@@ -5,9 +5,9 @@ Rust. El proyecto se construye incrementalmente en fases verificables.
 
 ## Estado actual
 
-**Fase 4 completada:** el juego incluye una pantalla de bienvenida y un selector
-visual para tres niveles completos. Cada opcion muestra nombre, dificultad,
-descripcion, objetivos y una vista previa del mapa antes de comenzar.
+**Fase 5.1 completada:** el juego reproduce una composicion ambiental original
+generada por codigo. La musica se mantiene en bucle durante todas las pantallas y
+se puede activar o silenciar sin interrumpir la partida.
 
 ## Requisitos
 
@@ -37,6 +37,7 @@ cargo run --release
 | --- | --- | --- |
 | Bienvenida | `Enter` | Abrir selector de nivel |
 | Bienvenida/selector | `Q` | Salir |
+| Todas | `F1` | Activar o silenciar el audio |
 | Selector | Flechas izquierda/derecha o `A`/`D` | Recorrer los niveles disponibles |
 | Selector | `Enter` | Iniciar nivel |
 | Selector | `Esc` | Volver a la bienvenida |
@@ -63,6 +64,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 ## Estructura actual
 
 - `src/main.rs`: inicializacion de raylib y bucle principal.
+- `src/audio.rs`: sintesis, codificacion WAV y reproduccion de musica original.
 - `src/config.rs`: configuracion global de ventana y simulacion.
 - `src/app.rs`: estado y transiciones de la aplicacion.
 - `src/game/collision.rs`: colision circular, subpasos y deslizamiento por ejes.
@@ -114,10 +116,15 @@ cargo clippy --all-targets --all-features -- -D warnings
 La fase 4 cubre la pantalla de bienvenida y la seleccion entre multiples niveles
 solicitadas por la rubrica.
 
+## Audio
+
+La musica de fondo es una composicion original sintetizada en tiempo de ejecucion
+con ondas, arpegios y campanas. No utiliza canciones ni recursos externos, por lo
+que no requiere atribuciones adicionales.
+
 ## Entrega
 
 La version final incluira instrucciones completas, creditos de recursos, enlace
 al video demostrativo y una lista de los objetivos de la rubrica implementados.
-
 
 

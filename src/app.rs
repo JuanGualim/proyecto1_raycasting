@@ -22,6 +22,7 @@ pub struct App {
     should_quit: bool,
     game: Game,
     level_load_error: Option<String>,
+    audio_enabled: bool,
 }
 
 impl App {
@@ -33,11 +34,16 @@ impl App {
             should_quit: false,
             game: Game::load_first_level()?,
             level_load_error: None,
+            audio_enabled: true,
         })
     }
 
     pub fn update(&mut self, input: &mut RaylibHandle, delta_time: f32) {
         self.elapsed_seconds += delta_time;
+
+        if input.is_key_pressed(KeyboardKey::KEY_F1) {
+            self.audio_enabled = !self.audio_enabled;
+        }
 
         match self.screen {
             Screen::Welcome => {
@@ -166,11 +172,16 @@ impl App {
             self.elapsed_seconds,
             &self.game,
             self.level_load_error.as_deref(),
+            self.audio_enabled,
         );
     }
 
     pub fn should_quit(&self) -> bool {
         self.should_quit
+    }
+
+    pub fn audio_enabled(&self) -> bool {
+        self.audio_enabled
     }
 }
 
@@ -197,6 +208,7 @@ mod tests {
 
         assert_eq!(app.screen, Screen::Welcome);
         assert_eq!(app.selected_level, 0);
+        assert!(app.audio_enabled());
         assert!(!app.should_quit());
     }
 

@@ -27,6 +27,7 @@ pub fn draw(
     elapsed_seconds: f32,
     game: &Game,
     level_load_error: Option<&str>,
+    audio_enabled: bool,
 ) {
     drawing.clear_background(NIGHT);
 
@@ -42,6 +43,34 @@ pub fn draw(
         }
         Screen::Victory => draw_victory(drawing, game),
     }
+
+    draw_audio_status(drawing, screen, audio_enabled);
+}
+
+fn draw_audio_status(drawing: &mut RaylibDrawHandle<'_>, screen: Screen, audio_enabled: bool) {
+    let label = if audio_enabled {
+        "F1  AUDIO ACTIVO"
+    } else {
+        "F1  AUDIO SILENCIADO"
+    };
+    let font_size = 14;
+    let width = drawing.measure_text(label, font_size);
+    let (x, y) = if matches!(screen, Screen::Playing | Screen::Paused) {
+        (
+            config::WINDOW_WIDTH - width - 20,
+            config::WINDOW_HEIGHT - 27,
+        )
+    } else {
+        (14, 14)
+    };
+    drawing.draw_rectangle(x - 7, y - 4, width + 14, 22, Color::new(8, 7, 18, 210));
+    drawing.draw_text(
+        label,
+        x,
+        y,
+        font_size,
+        if audio_enabled { CYAN } else { MUTED },
+    );
 }
 
 fn draw_welcome(drawing: &mut RaylibDrawHandle<'_>, elapsed_seconds: f32) {
