@@ -3,12 +3,6 @@
 Proyecto 1 de Graficas por Computadora: un ray caster jugable implementado en
 Rust. El proyecto se construye incrementalmente en fases verificables.
 
-## Estado actual
-
-**Fase 5 completada:** el juego cuenta con musica ambiental y ocho efectos de
-sonido originales generados por codigo. Combate, objetivos, victoria y menus
-ofrecen retroalimentacion auditiva sin repetir eventos cada cuadro.
-
 ## Requisitos
 
 - Rust estable con Cargo.
@@ -59,6 +53,8 @@ alcanzar el portal.
 cargo fmt --check
 cargo test
 cargo clippy --all-targets --all-features -- -D warnings
+cargo test --release
+cargo build --release
 ```
 
 ## Estructura actual
@@ -113,8 +109,6 @@ cargo clippy --all-targets --all-features -- -D warnings
 3. Confirmar que las flechas y `A`/`D` recorran el catalogo de forma circular.
 4. Presionar `Esc` para volver a la bienvenida y `Enter` para regresar.
 
-La fase 4 cubre la pantalla de bienvenida y la seleccion entre multiples niveles
-solicitadas por la rubrica.
 
 ## Audio
 
@@ -135,11 +129,27 @@ eventos garantiza que cada efecto corresponda a una accion concreta.
    listo.
 5. Cruzar el portal y escuchar el efecto de victoria.
 
-La fase 5 cubre los objetivos de musica de fondo y efectos de sonido de la
-rubrica.
+
+## Objetivos de la rubrica
+
+| Objetivo | Estado | Evidencia |
+| --- | --- | --- |
+| Nivel entero y jugable | Cumplido | Tres mapas cerrados con guardian, llave y portal alcanzables |
+| Colisiones seguras | Cumplido | Radio del jugador, movimiento por subpasos y deslizamiento por ejes |
+| Paredes diferenciadas | Cumplido | Cinco materiales con colores distintos en todos los niveles |
+| Rotacion horizontal con mouse | Cumplido | Captura del cursor y rotacion solo sobre el eje horizontal |
+| Disparo | Cumplido | Hitscan con enfriamiento, oclusion por paredes y retroalimentacion visual |
+| Minimapa en una esquina | Cumplido | Superpuesto en la esquina superior derecha |
+| Musica de fondo | Cumplido | Composicion original reproducida en bucle |
+| Efectos de sonido | Cumplido | Ocho efectos vinculados a eventos del juego |
+| Animacion de sprites | Cumplido | Guardian, llave y portal utilizan animacion por cuadros |
+| Pantalla de bienvenida | Cumplido | Portada animada antes del selector |
+| Seleccion de multiples niveles | Cumplido | Catalogo visual con tres niveles |
+| Pantalla de exito | Cumplido | Se activa al derrotar al guardian, recoger la llave y cruzar el portal |
+
 
 ## Entrega
 
-La version final incluira instrucciones completas, creditos de recursos, enlace
-al video demostrativo y una lista de los objetivos de la rubrica implementados.
+- Repositorio: [github.com/JuanGualim/proyecto1_raycasting](https://github.com/JuanGualim/proyecto1_raycasting)
+- Video demostrativo: [video_proyecto1](https://youtu.be/2oYrvrAxKTk)
 
